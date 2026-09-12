@@ -10,7 +10,8 @@ implementada nesta etapa.
 - **Endereço**: endereço sintético associado a um cliente.
 - **Conta**: conta sintética pertencente a um cliente.
 - **Cartão**: instrumento sintético associado a uma conta, sem reproduzir
-  números de cartões reais.
+  números de cartões reais. A primeira versão terá somente cartões de débito;
+  cartões de crédito pertencem ao roadmap futuro.
 - **Estabelecimento**: recebedor sintético de pagamentos.
 - **Transação**: tentativa de movimentação financeira, aprovada ou recusada.
 - **Transferência**: movimentação consistente entre uma conta de origem e uma
@@ -26,4 +27,3 @@ implementação de cada entidade.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por
 seed e incapazes de representar deliberadamente pessoas ou instrumentos reais.
-

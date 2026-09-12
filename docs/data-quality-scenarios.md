@@ -18,6 +18,6 @@ posteriores.
 ## Cenários controlados futuros
 
 O gerador poderá oferecer cenários opt-in com problemas conhecidos, como valor
-nulo, chave órfã ou duplicidade. Esses registros deverão ser claramente
-marcados, reproduzíveis e separados do comportamento válido padrão.
-
+nulo, chave órfã ou duplicidade. Arquivos válidos e arquivos com anomalias
+intencionais deverão ficar em execuções ou cenários separados. Os registros
+anômalos deverão ser claramente marcados e reproduzíveis.

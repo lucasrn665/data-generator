@@ -8,8 +8,11 @@ implementação neste esqueleto.
 - Identificadores usam convenções que os tornam claramente sintéticos.
 - Chaves estrangeiras sempre apontam para registros existentes.
 - Valores monetários são calculados com `Decimal`, nunca com `float`.
+- Contas não podem possuir saldo negativo e, inicialmente, não haverá cheque
+  especial.
 - Transações recusadas não alteram saldos.
-- Estornos referenciam transações anteriores elegíveis e compensam seu efeito.
+- Cada transação aprovada pode receber no máximo um estorno, que deve referenciar
+  a transação original, ser integral e compensar seu efeito.
 - Transferências geram efeitos equivalentes e opostos na origem e no destino.
 - Saldos são reconciliáveis com as movimentações aprovadas.
 - Arquivos gerados são gravados fora do código-fonte.
@@ -27,8 +30,7 @@ de domínio:
 - `declined_rate_overall` é a proporção de todas as tentativas de transação que
   serão recusadas. Transações recusadas não alteram saldos.
 - `reversal_rate_of_approved` é a proporção das transações inicialmente
-  aprovadas que serão estornadas. A taxa não se aplica a transações recusadas, e
-  todo estorno deve referenciar a transação original.
+  aprovadas que serão estornadas. A taxa não se aplica a transações recusadas.
 - `late_event_rate_overall` é a proporção de todos os eventos entregues com
   atraso. A entrega tardia é independente da classificação de fraude e do
   status da transação.
