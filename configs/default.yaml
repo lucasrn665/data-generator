@@ -1,0 +1,35 @@
+# Parâmetros reservados para as próximas etapas do gerador.
+seed: 42
+reference_date: "2026-01-01"
+
+currency: BRL
+
+output:
+  directory: data/output
+  format: csv
+
+customers:
+  count: 10000
+
+accounts:
+  min_per_customer: 1
+  max_per_customer: 3
+  initial_balance:
+    # Unidades monetárias completas em strings para conversão explícita a Decimal.
+    min: "100.00"
+    max: "50000.00"
+
+transactions:
+  count: 100000
+  # Proporção de todas as transações; independente do status.
+  fraud_rate_overall: 0.005
+  # Proporção de todas as tentativas que serão recusadas.
+  declined_rate_overall: 0.03
+  # Proporção apenas das transações inicialmente aprovadas.
+  # Cada estorno deverá referenciar sua transação original.
+  reversal_rate_of_approved: 0.01
+  # Proporção de todos os eventos; independente de fraude e status.
+  late_event_rate_overall: 0.02
+
+# Endereços, cartões, estabelecimentos e transferências serão configurados em
+# etapas futuras.

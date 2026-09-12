@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Ambientes virtuais
+.venv/
+venv/
+
+# Build e cobertura
+build/
+dist/
+.coverage
+htmlcov/
+
+# Dados gerados localmente
+data/output/
+
+# Editores e sistema operacional
+.idea/
+.vscode/
+.DS_Store
