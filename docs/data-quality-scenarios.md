@@ -7,6 +7,11 @@ posteriores.
 
 - unicidade e formato sintético dos identificadores;
 - ausência de chaves estrangeiras órfãs;
+- exatamente um endereço principal por cliente na primeira versão;
+- quantidade de contas por cliente dentro do intervalo configurado, com ao
+  menos uma conta para cada cliente;
+- vínculo de cada conta com exatamente um cliente e tipo de conta restrito a
+  `checking` ou `savings`;
 - tipos, nulabilidade e precisão compatíveis com o esquema PyArrow;
 - reprodução exata de uma amostra a partir da mesma seed;
 - ausência de alteração de saldo por transações recusadas;
@@ -14,6 +19,8 @@ posteriores.
 - igualdade entre débito e crédito de uma transferência;
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.
+- ausência de arquivos gerados dentro de `src/`, após a implementação da
+  validação de segurança de caminhos.
 
 ## Cenários controlados futuros
 

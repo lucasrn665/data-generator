@@ -88,7 +88,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         "accounts.initial_balance.max",
     )
 
-    minimum_accounts = _non_negative_int(
+    minimum_accounts = _positive_int(
         accounts["min_per_customer"], "accounts.min_per_customer"
     )
     maximum_accounts = _non_negative_int(
@@ -164,6 +164,14 @@ def _non_negative_int(value: Any, path: str) -> int:
         _fail(path, "deve ser um número inteiro")
     if value < 0:
         _fail(path, "deve ser maior ou igual a 0")
+    return value
+
+
+def _positive_int(value: Any, path: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        _fail(path, "deve ser um número inteiro")
+    if value < 1:
+        _fail(path, "deve ser maior ou igual a 1")
     return value
 
 

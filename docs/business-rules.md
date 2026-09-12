@@ -8,6 +8,14 @@ implementação neste esqueleto.
 - Identificadores usam convenções que os tornam claramente sintéticos.
 - Chaves estrangeiras sempre apontam para registros existentes.
 - Valores monetários são calculados com `Decimal`, nunca com `float`.
+- Cada cliente possui exatamente um endereço principal na primeira versão.
+  Múltiplos endereços serão permitidos futuramente, sem configuração nesta
+  versão.
+- Cada cliente possui entre `accounts.min_per_customer` e
+  `accounts.max_per_customer` contas; o mínimo configurado deve ser pelo menos
+  um.
+- Cada conta pertence a exatamente um cliente e possui o tipo `checking` ou
+  `savings`.
 - Contas não podem possuir saldo negativo e, inicialmente, não haverá cheque
   especial.
 - Transações recusadas não alteram saldos.
@@ -15,7 +23,13 @@ implementação neste esqueleto.
   a transação original, ser integral e compensar seu efeito.
 - Transferências geram efeitos equivalentes e opostos na origem e no destino.
 - Saldos são reconciliáveis com as movimentações aprovadas.
-- Arquivos gerados são gravados fora do código-fonte.
+- O diretório padrão de saída é `data/output`. Caminhos relativos são resolvidos
+  a partir da raiz do projeto.
+- Arquivos gerados ficam fora de `src/` e fora do versionamento Git, embora
+  possam ficar dentro do repositório. `data/output/` deve permanecer no
+  `.gitignore`.
+- Uma futura validação de segurança de caminhos deverá rejeitar diretórios de
+  saída localizados dentro de `src/`.
 - Configurações e dados gerados não contêm credenciais.
 
 ## Semântica das taxas de transação

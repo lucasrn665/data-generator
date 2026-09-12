@@ -7,8 +7,10 @@ implementada nesta etapa.
 
 - **Cliente**: pessoa inteiramente sintética, identificada por um prefixo que
   deixe explícita sua origem artificial.
-- **Endereço**: endereço sintético associado a um cliente.
-- **Conta**: conta sintética pertencente a um cliente.
+- **Endereço**: endereço sintético associado a um cliente. Na primeira versão,
+  cada cliente terá exatamente um endereço principal.
+- **Conta**: conta sintética dos tipos `checking` ou `savings`, pertencente a
+  exatamente um cliente.
 - **Cartão**: instrumento sintético associado a uma conta, sem reproduzir
   números de cartões reais. A primeira versão terá somente cartões de débito;
   cartões de crédito pertencem ao roadmap futuro.
@@ -20,10 +22,16 @@ implementada nesta etapa.
 
 ## Relacionamentos planejados
 
-Um cliente poderá possuir endereços e contas; uma conta poderá possuir cartões,
+Na primeira versão, cada cliente terá exatamente um endereço principal. O
+modelo deverá permitir múltiplos endereços futuramente, mas essa cardinalidade
+não será configurável agora.
+
+Cada cliente terá entre `accounts.min_per_customer` e
+`accounts.max_per_customer` contas e deverá possuir pelo menos uma. Cada conta
+pertencerá a exatamente um cliente. Uma conta poderá possuir cartões,
 transações, transferências e saldos. Estornos deverão referenciar uma transação
-anterior. As cardinalidades e os esquemas PyArrow serão definidos antes da
-implementação de cada entidade.
+anterior. Os esquemas PyArrow serão definidos antes da implementação de cada
+entidade.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por
 seed e incapazes de representar deliberadamente pessoas ou instrumentos reais.

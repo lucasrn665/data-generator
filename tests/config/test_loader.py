@@ -166,7 +166,7 @@ def test_accepts_rate_at_closed_interval_boundary(
 
 @pytest.mark.parametrize(
     ("section", "field"),
-    [("customers", "count"), ("accounts", "min_per_customer")],
+    [("customers", "count")],
 )
 def test_rejects_negative_integer(
     tmp_path: Path,
@@ -180,6 +180,22 @@ def test_rejects_negative_integer(
     target[field] = -1
 
     with pytest.raises(ConfigError, match="deve ser maior ou igual a 0"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("minimum", [-1, 0])
+def test_rejects_fewer_than_one_account_per_customer(
+    tmp_path: Path, valid_config: dict[str, object], minimum: int
+) -> None:
+    config = deepcopy(valid_config)
+    accounts = config["accounts"]
+    assert isinstance(accounts, dict)
+    accounts["min_per_customer"] = minimum
+
+    with pytest.raises(
+        ConfigError,
+        match="'accounts.min_per_customer': deve ser maior ou igual a 1",
+    ):
         load_config(write_config(tmp_path, config))
 
 
