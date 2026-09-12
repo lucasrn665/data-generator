@@ -36,6 +36,56 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.transactions.fraud_rate_overall == Decimal("0.005")
 
 
+def test_rejects_missing_config_file(tmp_path: Path) -> None:
+    missing_path = tmp_path / "missing.yaml"
+
+    with pytest.raises(ConfigError, match="Não foi possível ler a configuração"):
+        load_config(missing_path)
+
+
+def test_rejects_yaml_root_that_is_not_an_object(tmp_path: Path) -> None:
+    path = write_config(tmp_path, ["not", "an", "object"])
+
+    with pytest.raises(ConfigError, match="'config': deve ser um objeto"):
+        load_config(path)
+
+
+def test_rejects_unsupported_currency(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    config["currency"] = "USD"
+
+    with pytest.raises(ConfigError, match="'currency': deve ser um de: BRL"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_unsupported_output_format(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    output = config["output"]
+    assert isinstance(output, dict)
+    output["format"] = "parquet"
+
+    with pytest.raises(ConfigError, match="'output.format': deve ser um de: csv"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_empty_output_directory(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    output = config["output"]
+    assert isinstance(output, dict)
+    output["directory"] = ""
+
+    with pytest.raises(
+        ConfigError, match="'output.directory': deve ser uma string não vazia"
+    ):
+        load_config(write_config(tmp_path, config))
+
+
 @pytest.mark.parametrize(
     ("section", "field", "message"),
     [
