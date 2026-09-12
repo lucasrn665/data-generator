@@ -46,6 +46,13 @@ Consulte o [modelo de domínio](domain-model.md), as
   negativos, intervalos `min <= max` e taxas entre zero e um.
 - Validação de `accounts.min_per_customer` como inteiro maior ou igual a um.
 - Rejeição de moeda e formato de saída não suportados.
+- Modelos tipados e imutáveis de clientes, endereços e contas.
+- Schemas PyArrow explícitos, com datas, nulabilidade e saldo de abertura
+  `decimal128(18, 2)`.
+- Geração determinística e isolada por componente, com seeds derivadas por
+  SHA-256, instâncias próprias de `random.Random` e Faker `pt_BR`.
+- IDs sintéticos prefixados, um endereço principal por cliente e cardinalidade
+  configurada de contas com chaves estrangeiras válidas.
 
 ## Testes e validações disponíveis
 
@@ -54,22 +61,20 @@ Consulte o [modelo de domínio](domain-model.md), as
 - Campos ausentes, propriedades desconhecidas e tipos ou valores inválidos.
 - Limites inclusivos das taxas, intervalos invertidos, moeda, formato e diretório
   de saída.
-- pytest: 30 testes passaram na última execução concluída, realizada com Python
-  3.14.4 antes das alterações atuais. O teste do novo limite mínimo de contas
-  foi adicionado, mas a suíte atual ainda precisa ser executada em um ambiente
-  com pytest disponível.
-- Ruff: lint e verificação de formatação passaram antes das alterações atuais;
-  o alvo permanece configurado como Python 3.12. As verificações atuais ainda
-  precisam ser executadas em um ambiente com Ruff disponível.
+- Determinismo, isolamento entre componentes, IDs, relações, cardinalidades,
+  datas, tipos de conta, saldos de abertura e compatibilidade PyArrow.
+- pytest: 43 testes passando na execução atual com Python 3.14.4.
+- Ruff: lint e verificação de formatação passando; o alvo permanece configurado
+  como Python 3.12.
 - A sintaxe foi analisada como Python 3.12, mas a suíte ainda deve ser executada
   em um interpretador Python 3.12 real. Essa verificação permanece pendente,
   mas não constitui bloqueio para o desenvolvimento local atual.
 
 ## Limitações conhecidas
 
-- Clientes, endereços, contas, cartões, estabelecimentos, transações,
-  transferências, ledger e saldos ainda não foram implementados.
-- Ainda não existem CLI, geração de dados, schemas PyArrow ou escrita CSV.
+- Cartões, estabelecimentos, transações, transferências, ledger e saldos atuais
+  ainda não foram implementados.
+- Ainda não existem CLI, escrita CSV ou schemas PyArrow para entidades futuras.
 - A configuração aceita somente BRL e CSV.
 - A resolução de caminhos relativos a partir da raiz do projeto e a rejeição de
   saídas dentro de `src/` ainda não foram implementadas.
@@ -77,11 +82,9 @@ Consulte o [modelo de domínio](domain-model.md), as
 
 ## Próxima etapa planejada
 
-Definir schemas PyArrow, identificadores, enums e modelos mínimos de domínio
-para clientes, endereços e contas, acompanhados de testes de tipos, unicidade e
-integridade referencial. A etapa adotará um endereço principal por cliente,
-contas dos tipos `checking` e `savings` e as cardinalidades documentadas. Cartões
-e a geração de movimentações financeiras permanecem fora dessa etapa.
+Definir o próximo incremento antes de implementar novas entidades. Escrita CSV,
+validação segura do caminho de saída e cartões são candidatos naturais; eventos
+financeiros, ledger e saldo atual permanecem fora da etapa concluída.
 
 ## Comandos principais
 

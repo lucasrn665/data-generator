@@ -1,7 +1,6 @@
 # Regras de negócio
 
-As regras abaixo são requisitos para etapas futuras e ainda não possuem
-implementação neste esqueleto.
+As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
 
 - Toda geração recebe uma seed e produz o mesmo resultado para os mesmos
   parâmetros e versão do gerador.
@@ -16,6 +15,8 @@ implementação neste esqueleto.
   um.
 - Cada conta pertence a exatamente um cliente e possui o tipo `checking` ou
   `savings`.
+- O valor monetário da conta gerada é seu saldo de abertura. O saldo atual será
+  derivado do ledger em uma etapa posterior.
 - Contas não podem possuir saldo negativo e, inicialmente, não haverá cheque
   especial.
 - Transações recusadas não alteram saldos.
