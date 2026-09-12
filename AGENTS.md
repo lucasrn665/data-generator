@@ -18,7 +18,7 @@ exercícios de engenharia de dados no Databricks.
 
 ## Tecnologias
 
-- Python 3.12
+- Python 3.14.4
 - Faker
 - PyArrow
 - PyYAML

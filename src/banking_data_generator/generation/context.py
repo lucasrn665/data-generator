@@ -21,7 +21,7 @@ class GenerationContext:
     faker: Faker
 
     @classmethod
-    def create(cls, global_seed: int, component: str) -> "GenerationContext":
+    def create(cls, global_seed: int, component: str) -> GenerationContext:
         component_seed = derive_component_seed(global_seed, component)
         faker = Faker("pt_BR")
         faker.seed_instance(component_seed)

@@ -7,7 +7,8 @@ gerada.
 
 ## Requisitos
 
-- Python 3.12
+- Python 3.14.4 para desenvolvimento local; o pacote suporta Python
+  `>=3.14,<3.15`
 - `pip`
 
 ## Preparação do ambiente
@@ -16,7 +17,7 @@ Crie e ative um ambiente virtual fora deste repositório ou em `.venv` e, soment
 depois, instale o projeto com as ferramentas de desenvolvimento:
 
 ```bash
-python3.12 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'

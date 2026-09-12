@@ -64,11 +64,9 @@ Consulte o [modelo de domínio](domain-model.md), as
 - Determinismo, isolamento entre componentes, IDs, relações, cardinalidades,
   datas, tipos de conta, saldos de abertura e compatibilidade PyArrow.
 - pytest: 43 testes passando na execução atual com Python 3.14.4.
-- Ruff: lint e verificação de formatação passando; o alvo permanece configurado
-  como Python 3.12.
-- A sintaxe foi analisada como Python 3.12, mas a suíte ainda deve ser executada
-  em um interpretador Python 3.12 real. Essa verificação permanece pendente,
-  mas não constitui bloqueio para o desenvolvimento local atual.
+- Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
+  pacote suporta Python `>=3.14,<3.15`.
+- Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
 
 ## Limitações conhecidas
 
@@ -91,7 +89,7 @@ financeiros, ledger e saldo atual permanecem fora da etapa concluída.
 Preparar o ambiente e instalar o projeto com dependências de desenvolvimento:
 
 ```bash
-python3.12 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'
