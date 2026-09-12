@@ -19,8 +19,7 @@ posteriores.
 - igualdade entre débito e crédito de uma transferência;
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.
-- ausência de arquivos gerados dentro de `src/`, após a implementação da
-  validação de segurança de caminhos.
+- ausência de arquivos gerados dentro de `src/` ou `.git/`.
 
 ## Cenários controlados futuros
 

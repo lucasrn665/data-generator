@@ -53,6 +53,12 @@ Consulte o [modelo de domínio](domain-model.md), as
   SHA-256, instâncias próprias de `random.Random` e Faker `pt_BR`.
 - IDs sintéticos prefixados, um endereço principal por cliente e cardinalidade
   configurada de contas com chaves estrangeiras válidas.
+- Conversão explícita de clientes, endereços e contas para tabelas PyArrow.
+- Escrita batch determinística de `customers.csv`, `addresses.csv` e
+  `accounts.csv`, com substituição atômica individual e limpeza do temporário
+  próprio em caso de falha.
+- Resolução do diretório de saída pela raiz do projeto e rejeição de caminhos
+  absolutos, travessias, escapes e destinos dentro de `src/` ou `.git/`.
 
 ## Testes e validações disponíveis
 
@@ -63,7 +69,9 @@ Consulte o [modelo de domínio](domain-model.md), as
   de saída.
 - Determinismo, isolamento entre componentes, IDs, relações, cardinalidades,
   datas, tipos de conta, saldos de abertura e compatibilidade PyArrow.
-- pytest: 43 testes passando na execução atual com Python 3.14.4.
+- Conversão e round-trip CSV, escaping, UTF-8, cabeçalhos, ordem, datas,
+  decimais, idempotência, atomicidade e segurança de caminhos.
+- pytest: 57 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
@@ -72,17 +80,15 @@ Consulte o [modelo de domínio](domain-model.md), as
 
 - Cartões, estabelecimentos, transações, transferências, ledger e saldos atuais
   ainda não foram implementados.
-- Ainda não existem CLI, escrita CSV ou schemas PyArrow para entidades futuras.
+- Ainda não existem CLI ou schemas PyArrow para entidades futuras.
 - A configuração aceita somente BRL e CSV.
-- A resolução de caminhos relativos a partir da raiz do projeto e a rejeição de
-  saídas dentro de `src/` ainda não foram implementadas.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir o próximo incremento antes de implementar novas entidades. Escrita CSV,
-validação segura do caminho de saída e cartões são candidatos naturais; eventos
-financeiros, ledger e saldo atual permanecem fora da etapa concluída.
+Definir o próximo incremento antes de implementar novas entidades. Uma camada
+de orquestração ou cartões são candidatos naturais; eventos financeiros,
+ledger e saldo atual permanecem fora da etapa concluída.
 
 ## Comandos principais
 
@@ -110,4 +116,4 @@ python -c "import banking_data_generator as b; print(b.installation_status())"
 python -c "from banking_data_generator.config import load_config; print(load_config('configs/default.yaml'))"
 ```
 
-Ainda não existe um comando para gerar dados.
+Ainda não existe uma CLI para gerar dados.

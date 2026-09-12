@@ -29,8 +29,8 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
 - Arquivos gerados ficam fora de `src/` e fora do versionamento Git, embora
   possam ficar dentro do repositório. `data/output/` deve permanecer no
   `.gitignore`.
-- Uma futura validação de segurança de caminhos deverá rejeitar diretórios de
-  saída localizados dentro de `src/`.
+- A exportação rejeita caminhos absolutos, escapes da raiz do projeto e
+  diretórios de saída localizados dentro de `src/` ou `.git/`.
 - Configurações e dados gerados não contêm credenciais.
 
 ## Semântica das taxas de transação
