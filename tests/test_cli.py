@@ -14,6 +14,7 @@ def cli_project(tmp_path: Path) -> Path:
     contents = DEFAULT_CONFIG.read_text(encoding="utf-8")
     contents = contents.replace("directory: data/output", "directory: output")
     contents = contents.replace("count: 10000", "count: 4", 1)
+    contents = contents.replace("count: 100000", "count: 20", 1)
     (config_directory / "test.yaml").write_text(contents, encoding="utf-8")
     return tmp_path
 
@@ -26,7 +27,7 @@ def test_help_is_clear_and_successful(capsys: pytest.CaptureFixture[str]) -> Non
     output = capsys.readouterr().out
     assert "--config" in output
     assert "--project-root" in output
-    assert "seis arquivos CSV" in output
+    assert "sete arquivos CSV" in output
 
 
 def test_missing_required_argument_returns_argparse_error(
@@ -64,16 +65,25 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "créditos de abertura:" in captured.out
     assert "cartões:" in captured.out
     assert "estabelecimentos:" in captured.out
-    assert "versão do gerador: 0.3.0" in captured.out
-    assert "versão do schema: 1.2.0" in captured.out
+    assert "tentativas de compra:" in captured.out
+    assert "compras aprovadas:" in captured.out
+    assert "compras recusadas:" in captured.out
+    assert "meta de recusas:" in captured.out
+    assert "recusas planejadas:" in captured.out
+    assert "recusas adicionais:" in captured.out
+    assert "versão do gerador: 0.4.0" in captured.out
+    assert "versão do schema: 1.3.0" in captured.out
     assert "publicação: criada" in captured.out
-    assert "cards.csv, merchants.csv, ledger_entries.csv, manifest.json" in captured.out
+    assert (
+        "merchants.csv, transactions.csv, ledger_entries.csv, manifest.json"
+        in captured.out
+    )
     assert "SYN-CUS-" not in captured.out
 
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.2.0"
+        / "schema_version=1.3.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -84,6 +94,7 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
         "accounts.csv",
         "cards.csv",
         "merchants.csv",
+        "transactions.csv",
         "ledger_entries.csv",
     }
     assert (directory / "manifest.json").is_file()

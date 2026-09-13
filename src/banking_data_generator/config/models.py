@@ -67,6 +67,8 @@ class TransactionsConfig:
     """Parâmetros para a futura geração de transações."""
 
     count: int
+    purchase_amount: InitialBalanceConfig
+    history_days: int
     fraud_rate_overall: Decimal
     declined_rate_overall: Decimal
     reversal_rate_of_approved: Decimal

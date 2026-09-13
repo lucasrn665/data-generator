@@ -35,6 +35,7 @@ def batch_data(
         config,
         output=replace(config.output, directory=Path("exports")),
         customers=replace(config.customers, count=12),
+        transactions=replace(config.transactions, count=0),
     )
     customers = generate_customers(config)
     addresses = generate_addresses(customers, config)
@@ -61,7 +62,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
     expected_directory = (
         root
         / "exports"
-        / "schema_version=1.2.0"
+        / "schema_version=1.3.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -75,6 +76,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
             paths.accounts,
             paths.cards,
             paths.merchants,
+            paths.transactions,
             paths.ledger_entries,
         )
     } == {
@@ -83,6 +85,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
         "accounts.csv",
         "cards.csv",
         "merchants.csv",
+        "transactions.csv",
         "ledger_entries.csv",
     }
     for path, schema, records in (

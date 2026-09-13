@@ -6,12 +6,15 @@ from banking_data_generator.domain.enums import (
     ActivityProfile,
     CardStatus,
     CardType,
+    DeclineReason,
     EntityStatus,
     EntryDirection,
     LedgerEntryType,
     MerchantCategory,
     MerchantRiskProfile,
     MerchantStatus,
+    TransactionStatus,
+    TransactionType,
 )
 from banking_data_generator.domain.models import (
     Account,
@@ -20,6 +23,7 @@ from banking_data_generator.domain.models import (
     DebitCard,
     LedgerEntry,
     Merchant,
+    Transaction,
 )
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
@@ -28,6 +32,7 @@ from banking_data_generator.domain.schemas import (
     CUSTOMER_SCHEMA,
     LEDGER_ENTRY_SCHEMA,
     MERCHANT_SCHEMA,
+    TRANSACTION_SCHEMA,
 )
 
 __all__ = [
@@ -37,11 +42,13 @@ __all__ = [
     "CARD_SCHEMA",
     "LEDGER_ENTRY_SCHEMA",
     "MERCHANT_SCHEMA",
+    "TRANSACTION_SCHEMA",
     "Account",
     "AccountType",
     "ActivityProfile",
     "CardStatus",
     "CardType",
+    "DeclineReason",
     "Address",
     "Customer",
     "DebitCard",
@@ -54,4 +61,7 @@ __all__ = [
     "MerchantCategory",
     "MerchantRiskProfile",
     "MerchantStatus",
+    "Transaction",
+    "TransactionStatus",
+    "TransactionType",
 ]

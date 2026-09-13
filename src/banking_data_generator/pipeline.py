@@ -10,7 +10,7 @@ from pathlib import Path
 from banking_data_generator.accounting import (
     calculate_all_account_balances,
     generate_opening_entries,
-    reconcile_opening_balances,
+    sort_ledger_entries,
     validate_ledger,
 )
 from banking_data_generator.config import BankingDataGeneratorConfig
@@ -24,11 +24,16 @@ from banking_data_generator.export import write_batch_csv
 from banking_data_generator.generation import (
     generate_accounts,
     generate_addresses,
+    generate_card_purchases,
     generate_cards,
     generate_customers,
     generate_merchants,
 )
-from banking_data_generator.validation import validate_cards_and_merchants
+from banking_data_generator.validation import (
+    reconcile_purchase_balances,
+    validate_card_purchases,
+    validate_cards_and_merchants,
+)
 
 
 class DatasetValidationError(ValueError):
@@ -45,6 +50,7 @@ class BatchPipelineResult:
     accounts_file: Path
     cards_file: Path
     merchants_file: Path
+    transactions_file: Path
     ledger_entries_file: Path
     manifest_file: Path
     customer_count: int
@@ -52,6 +58,12 @@ class BatchPipelineResult:
     account_count: int
     card_count: int
     merchant_count: int
+    transaction_count: int
+    approved_transaction_count: int
+    declined_transaction_count: int
+    target_decline_count: int
+    planned_decline_count: int
+    additional_decline_count: int
     ledger_entry_count: int
     opening_credit_total: Decimal
     seed: int
@@ -74,10 +86,21 @@ def run_batch_pipeline(
 
     validate_dataset(config, customers, addresses, accounts)
     validate_cards_and_merchants(config, accounts, cards, merchants)
-    ledger_entries = generate_opening_entries(accounts)
+    purchases = generate_card_purchases(accounts, cards, merchants, config)
+    validate_card_purchases(
+        config,
+        accounts,
+        cards,
+        merchants,
+        purchases.transactions,
+        purchases.ledger_entries,
+    )
+    ledger_entries = sort_ledger_entries(
+        [*generate_opening_entries(accounts), *purchases.ledger_entries]
+    )
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
-    reconcile_opening_balances(accounts, balances)
+    reconcile_purchase_balances(accounts, purchases.transactions, balances)
     opening_credit_total = sum(
         (
             entry.amount
@@ -95,6 +118,7 @@ def run_batch_pipeline(
         ledger_entries,
         cards=cards,
         merchants=merchants,
+        transactions=purchases.transactions,
         project_root=project_root,
     )
     return BatchPipelineResult(
@@ -104,6 +128,7 @@ def run_batch_pipeline(
         accounts_file=publication.paths.accounts,
         cards_file=publication.paths.cards,
         merchants_file=publication.paths.merchants,
+        transactions_file=publication.paths.transactions,
         ledger_entries_file=publication.paths.ledger_entries,
         manifest_file=publication.paths.manifest,
         customer_count=len(customers),
@@ -111,6 +136,18 @@ def run_batch_pipeline(
         account_count=len(accounts),
         card_count=len(cards),
         merchant_count=len(merchants),
+        transaction_count=len(purchases.transactions),
+        approved_transaction_count=sum(
+            transaction.status.value == "approved"
+            for transaction in purchases.transactions
+        ),
+        declined_transaction_count=sum(
+            transaction.status.value == "declined"
+            for transaction in purchases.transactions
+        ),
+        target_decline_count=purchases.target_declines,
+        planned_decline_count=purchases.planned_declines,
+        additional_decline_count=purchases.additional_declines,
         ledger_entry_count=len(ledger_entries),
         opening_credit_total=opening_credit_total,
         seed=config.seed,

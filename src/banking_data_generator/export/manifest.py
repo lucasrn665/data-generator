@@ -18,6 +18,7 @@ CSV_ENTITY_FILES = {
     "customers": "customers.csv",
     "cards": "cards.csv",
     "merchants": "merchants.csv",
+    "transactions": "transactions.csv",
     "ledger_entries": "ledger_entries.csv",
 }
 MANAGED_FILENAMES = frozenset({*CSV_ENTITY_FILES.values(), "manifest.json"})
@@ -33,6 +34,7 @@ def build_manifest(
     record_counts: Mapping[str, int],
     accounting_invariants: Mapping[str, int | str],
     domain_summary: Mapping[str, Any],
+    transaction_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Construa o manifesto a partir dos CSVs já escritos e validados."""
     files = {
@@ -70,6 +72,15 @@ def build_manifest(
                 "initially_blocked_rate": str(config.cards.initially_blocked_rate),
             },
             "merchants": {"count": config.merchants.count},
+            "transactions": {
+                "count": config.transactions.count,
+                "purchase_amount": {
+                    "min": str(config.transactions.purchase_amount.min),
+                    "max": str(config.transactions.purchase_amount.max),
+                },
+                "history_days": config.transactions.history_days,
+                "declined_rate_overall": str(config.transactions.declined_rate_overall),
+            },
             "output_format": config.output.format,
         },
         "quality_scenarios": [],
@@ -77,6 +88,7 @@ def build_manifest(
         "scenario": "valid",
         "schema_version": BATCH_SCHEMA_VERSION,
         "seed": config.seed,
+        "transaction_summary": dict(transaction_summary),
     }
 
 
@@ -87,7 +99,7 @@ def serialize_manifest(manifest: Mapping[str, Any]) -> bytes:
 
 
 def validate_csv_files(directory: Path, manifest: Mapping[str, Any]) -> None:
-    """Valide presença, contagem, tamanho e checksum dos seis CSVs."""
+    """Valide presença, contagem, tamanho e checksum dos sete CSVs."""
     files = manifest.get("files")
     if not isinstance(files, dict):
         _fail("a propriedade 'files' é inválida")
@@ -139,7 +151,7 @@ def validate_existing_publication(
         _fail(f"o destino existente '{directory.name}' não é um diretório")
     actual_names = {path.name for path in directory.iterdir()}
     if actual_names != MANAGED_FILENAMES:
-        _fail("o diretório final não contém exatamente os sete arquivos esperados")
+        _fail("o diretório final não contém exatamente os oito arquivos esperados")
 
     manifest_path = directory / "manifest.json"
     existing_manifest = load_manifest(manifest_path)

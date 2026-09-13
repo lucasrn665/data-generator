@@ -23,6 +23,7 @@ class BatchCsvPaths:
     accounts: Path
     cards: Path
     merchants: Path
+    transactions: Path
     ledger_entries: Path
     manifest: Path
 
@@ -49,6 +50,7 @@ def build_batch_csv_paths(
         accounts=directory / "accounts.csv",
         cards=directory / "cards.csv",
         merchants=directory / "merchants.csv",
+        transactions=directory / "transactions.csv",
         ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",
     )

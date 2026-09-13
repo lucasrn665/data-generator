@@ -4,5 +4,16 @@ from banking_data_generator.validation.cards_merchants import (
     ExtendedDomainValidationError,
     validate_cards_and_merchants,
 )
+from banking_data_generator.validation.purchases import (
+    TransactionValidationError,
+    reconcile_purchase_balances,
+    validate_card_purchases,
+)
 
-__all__ = ["ExtendedDomainValidationError", "validate_cards_and_merchants"]
+__all__ = [
+    "ExtendedDomainValidationError",
+    "TransactionValidationError",
+    "reconcile_purchase_balances",
+    "validate_card_purchases",
+    "validate_cards_and_merchants",
+]

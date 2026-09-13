@@ -11,6 +11,7 @@ from banking_data_generator.domain.models import (
     DebitCard,
     LedgerEntry,
     Merchant,
+    Transaction,
 )
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
@@ -19,6 +20,7 @@ from banking_data_generator.domain.schemas import (
     CUSTOMER_SCHEMA,
     LEDGER_ENTRY_SCHEMA,
     MERCHANT_SCHEMA,
+    TRANSACTION_SCHEMA,
 )
 
 
@@ -132,3 +134,27 @@ def merchants_to_table(merchants: Sequence[Merchant]) -> pa.Table:
         for merchant in merchants
     ]
     return pa.Table.from_pylist(records, schema=MERCHANT_SCHEMA)
+
+
+def transactions_to_table(transactions: Sequence[Transaction]) -> pa.Table:
+    records = [
+        {
+            "transaction_id": transaction.transaction_id,
+            "account_id": transaction.account_id,
+            "card_id": transaction.card_id,
+            "merchant_id": transaction.merchant_id,
+            "transaction_type": transaction.transaction_type.value,
+            "status": transaction.status.value,
+            "amount": transaction.amount,
+            "currency": transaction.currency,
+            "effective_at": transaction.effective_at,
+            "event_at": transaction.event_at,
+            "ingested_at": transaction.ingested_at,
+            "decline_reason": (
+                transaction.decline_reason.value if transaction.decline_reason else None
+            ),
+            "original_transaction_id": transaction.original_transaction_id,
+        }
+        for transaction in transactions
+    ]
+    return pa.Table.from_pylist(records, schema=TRANSACTION_SCHEMA)

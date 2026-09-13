@@ -39,6 +39,9 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.cards.daily_purchase_limit.max == Decimal("5000.00")
     assert config.cards.initially_blocked_rate == Decimal("0.05")
     assert config.transactions.fraud_rate_overall == Decimal("0.005")
+    assert config.transactions.purchase_amount.min == Decimal("1.00")
+    assert config.transactions.purchase_amount.max == Decimal("500.00")
+    assert config.transactions.history_days == 365
 
 
 def test_rejects_missing_config_file(tmp_path: Path) -> None:
@@ -102,6 +105,11 @@ def test_rejects_empty_output_directory(
             "propriedades obrigatórias ausentes: initial_balance",
         ),
         ("transactions", "count", "propriedades obrigatórias ausentes: count"),
+        (
+            "transactions",
+            "history_days",
+            "propriedades obrigatórias ausentes: history_days",
+        ),
         ("merchants", "count", "propriedades obrigatórias ausentes: count"),
         ("cards", "per_account", "propriedades obrigatórias ausentes: per_account"),
     ],
@@ -345,4 +353,32 @@ def test_rejects_invalid_reference_date(
     config["reference_date"] = "2026-02-30"
 
     with pytest.raises(ConfigError, match="data ISO válida"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_rejects_invalid_transaction_history_days(
+    tmp_path: Path, valid_config: dict[str, object], value: object
+) -> None:
+    config = deepcopy(valid_config)
+    transactions = config["transactions"]
+    assert isinstance(transactions, dict)
+    transactions["history_days"] = value
+    with pytest.raises(ConfigError, match="transactions.history_days"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_invalid_or_inverted_purchase_amount(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    transactions = config["transactions"]
+    assert isinstance(transactions, dict)
+    amounts = transactions["purchase_amount"]
+    assert isinstance(amounts, dict)
+    amounts["min"] = "0.00"
+    with pytest.raises(ConfigError, match="deve ser maior que 0.00"):
+        load_config(write_config(tmp_path, config))
+    amounts["min"] = "501.00"
+    with pytest.raises(ConfigError, match="deve ser menor ou igual"):
         load_config(write_config(tmp_path, config))

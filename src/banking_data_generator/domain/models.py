@@ -9,12 +9,15 @@ from banking_data_generator.domain.enums import (
     ActivityProfile,
     CardStatus,
     CardType,
+    DeclineReason,
     EntityStatus,
     EntryDirection,
     LedgerEntryType,
     MerchantCategory,
     MerchantRiskProfile,
     MerchantStatus,
+    TransactionStatus,
+    TransactionType,
 )
 
 
@@ -104,3 +107,20 @@ class DebitCard:
     expiration_date: date
     daily_purchase_limit: Decimal
     currency: str
+
+
+@dataclass(frozen=True, slots=True)
+class Transaction:
+    transaction_id: str
+    account_id: str
+    card_id: str
+    merchant_id: str
+    transaction_type: TransactionType
+    status: TransactionStatus
+    amount: Decimal
+    currency: str
+    effective_at: datetime
+    event_at: datetime
+    ingested_at: datetime
+    decline_reason: DeclineReason | None
+    original_transaction_id: str | None

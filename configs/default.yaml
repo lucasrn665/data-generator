@@ -31,6 +31,10 @@ cards:
 
 transactions:
   count: 100000
+  purchase_amount:
+    min: "1.00"
+    max: "500.00"
+  history_days: 365
   # Proporção de todas as transações; independente do status.
   fraud_rate_overall: 0.005
   # Proporção de todas as tentativas que serão recusadas.

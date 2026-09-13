@@ -5,6 +5,10 @@ from banking_data_generator.generation.addresses import generate_addresses
 from banking_data_generator.generation.cards import generate_cards
 from banking_data_generator.generation.customers import generate_customers
 from banking_data_generator.generation.merchants import generate_merchants
+from banking_data_generator.generation.transactions import (
+    PurchaseGenerationResult,
+    generate_card_purchases,
+)
 
 __all__ = [
     "generate_accounts",
@@ -12,4 +16,6 @@ __all__ = [
     "generate_cards",
     "generate_customers",
     "generate_merchants",
+    "generate_card_purchases",
+    "PurchaseGenerationResult",
 ]

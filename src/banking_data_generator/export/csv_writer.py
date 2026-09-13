@@ -3,7 +3,7 @@
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any
@@ -30,6 +30,7 @@ from banking_data_generator.domain.models import (
     DebitCard,
     LedgerEntry,
     Merchant,
+    Transaction,
 )
 from banking_data_generator.export.manifest import (
     MANAGED_FILENAMES,
@@ -50,9 +51,14 @@ from banking_data_generator.export.tables import (
     customers_to_table,
     ledger_entries_to_table,
     merchants_to_table,
+    transactions_to_table,
 )
 from banking_data_generator.generation import generate_cards, generate_merchants
-from banking_data_generator.validation import validate_cards_and_merchants
+from banking_data_generator.validation import (
+    reconcile_purchase_balances,
+    validate_card_purchases,
+    validate_cards_and_merchants,
+)
 from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
 
 _WRITE_OPTIONS = pa_csv.WriteOptions(include_header=True, delimiter=",")
@@ -78,6 +84,7 @@ def write_batch_csv(
     *,
     cards: Sequence[DebitCard] | None = None,
     merchants: Sequence[Merchant] | None = None,
+    transactions: Sequence[Transaction] | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> BatchPublicationResult:
     """Publique atomicamente os CSVs e o manifesto como um único diretório."""
@@ -88,9 +95,21 @@ def write_batch_csv(
     if merchants is None:
         merchants = generate_merchants(config)
     validate_cards_and_merchants(config, accounts, cards, merchants)
+    transactions = [] if transactions is None else transactions
+    purchase_entries = [
+        entry
+        for entry in ledger_entries
+        if entry.entry_type is LedgerEntryType.CARD_PURCHASE
+    ]
+    validate_card_purchases(
+        config, accounts, cards, merchants, transactions, purchase_entries
+    )
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
-    reconcile_opening_balances(accounts, balances)
+    if purchase_entries:
+        reconcile_purchase_balances(accounts, transactions, balances)
+    else:
+        reconcile_opening_balances(accounts, balances)
     opening_entries = [
         entry
         for entry in ledger_entries
@@ -136,12 +155,50 @@ def write_batch_csv(
             )
         ),
     }
+    approved = [
+        transaction
+        for transaction in transactions
+        if transaction.status.value == "approved"
+    ]
+    declined = [
+        transaction
+        for transaction in transactions
+        if transaction.status.value == "declined"
+    ]
+    target_declines = int(
+        (
+            Decimal(len(transactions)) * config.transactions.declined_rate_overall
+        ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    )
+    reason_counts = Counter(
+        transaction.decline_reason.value
+        for transaction in declined
+        if transaction.decline_reason is not None
+    )
+    approved_total = sum((item.amount for item in approved), Decimal("0.00"))
+    declined_total = sum((item.amount for item in declined), Decimal("0.00"))
+    transaction_summary: dict[str, Any] = {
+        "attempt_count": len(transactions),
+        "approved_count": len(approved),
+        "declined_count": len(declined),
+        "target_decline_count": target_declines,
+        "planned_decline_count": reason_counts["synthetic_risk_rule"],
+        "additional_decline_count": len(declined)
+        - reason_counts["synthetic_risk_rule"],
+        "decline_count_by_reason": dict(sorted(reason_counts.items())),
+        "approved_amount_total": f"{approved_total:.2f}",
+        "declined_amount_total": f"{declined_total:.2f}",
+        "new_ledger_debit_count": len(purchase_entries),
+        "final_balance_total": f"{sum(balances.values(), Decimal('0.00')):.2f}",
+        "reconciliation_failure_count": 0,
+    }
     tables = {
         "customers.csv": customers_to_table(customers),
         "addresses.csv": addresses_to_table(addresses),
         "accounts.csv": accounts_to_table(accounts),
         "cards.csv": cards_to_table(cards),
         "merchants.csv": merchants_to_table(merchants),
+        "transactions.csv": transactions_to_table(transactions),
         "ledger_entries.csv": ledger_entries_to_table(ledger_entries),
     }
     record_counts = {
@@ -150,6 +207,7 @@ def write_batch_csv(
         "accounts": len(accounts),
         "cards": len(cards),
         "merchants": len(merchants),
+        "transactions": len(transactions),
         "ledger_entries": len(ledger_entries),
     }
     final_paths = build_batch_csv_paths(config, project_root=project_root)
@@ -167,6 +225,7 @@ def write_batch_csv(
             record_counts,
             accounting_invariants,
             domain_summary,
+            transaction_summary,
         )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)
@@ -194,6 +253,7 @@ def _write_csv_files(
         "accounts.csv": paths.accounts,
         "cards.csv": paths.cards,
         "merchants.csv": paths.merchants,
+        "transactions.csv": paths.transactions,
         "ledger_entries.csv": paths.ledger_entries,
     }
     for filename, table in tables.items():
@@ -245,6 +305,7 @@ def _paths_in_directory(directory: Path) -> BatchCsvPaths:
         accounts=directory / "accounts.csv",
         cards=directory / "cards.csv",
         merchants=directory / "merchants.csv",
+        transactions=directory / "transactions.csv",
         ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",
     )

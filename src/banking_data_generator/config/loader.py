@@ -40,11 +40,14 @@ _CARDS_FIELDS = {"per_account", "daily_purchase_limit", "initially_blocked_rate"
 _DAILY_PURCHASE_LIMIT_FIELDS = {"min", "max"}
 _TRANSACTIONS_FIELDS = {
     "count",
+    "purchase_amount",
+    "history_days",
     "fraud_rate_overall",
     "declined_rate_overall",
     "reversal_rate_of_approved",
     "late_event_rate_overall",
 }
+_PURCHASE_AMOUNT_FIELDS = {"min", "max"}
 _ZERO = Decimal("0")
 _ONE = Decimal("1")
 
@@ -88,6 +91,12 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         "accounts.initial_balance",
     )
     _validate_fields(transactions, _TRANSACTIONS_FIELDS, "transactions")
+    purchase_amount = _mapping(
+        transactions["purchase_amount"], "transactions.purchase_amount"
+    )
+    _validate_fields(
+        purchase_amount, _PURCHASE_AMOUNT_FIELDS, "transactions.purchase_amount"
+    )
     _validate_fields(merchants, _MERCHANTS_FIELDS, "merchants")
     _validate_fields(cards, _CARDS_FIELDS, "cards")
     daily_limit = _mapping(cards["daily_purchase_limit"], "cards.daily_purchase_limit")
@@ -113,6 +122,20 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     )
     if minimum_daily_limit <= _ZERO:
         _fail("cards.daily_purchase_limit.min", "deve ser maior que 0.00")
+    minimum_purchase = _money(
+        purchase_amount["min"], "transactions.purchase_amount.min"
+    )
+    maximum_purchase = _money(
+        purchase_amount["max"], "transactions.purchase_amount.max"
+    )
+    _validate_order(
+        minimum_purchase,
+        maximum_purchase,
+        "transactions.purchase_amount.min",
+        "transactions.purchase_amount.max",
+    )
+    if minimum_purchase <= _ZERO:
+        _fail("transactions.purchase_amount.min", "deve ser maior que 0.00")
 
     minimum_accounts = _positive_int(
         accounts["min_per_customer"], "accounts.min_per_customer"
@@ -161,6 +184,12 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         ),
         transactions=TransactionsConfig(
             count=_non_negative_int(transactions["count"], "transactions.count"),
+            purchase_amount=InitialBalanceConfig(
+                min=minimum_purchase, max=maximum_purchase
+            ),
+            history_days=_positive_int(
+                transactions["history_days"], "transactions.history_days"
+            ),
             fraud_rate_overall=_rate(
                 transactions["fraud_rate_overall"],
                 "transactions.fraud_rate_overall",

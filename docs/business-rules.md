@@ -34,7 +34,14 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   futuras deverão gerar efeitos equivalentes e opostos entre contas.
 - Contas não podem possuir saldo negativo e, inicialmente, não haverá cheque
   especial.
-- Transações recusadas não alteram saldos.
+- Tentativas de compra são ordenadas por `effective_at` e ID. Aprovações exigem
+  cartão e estabelecimento ativos, saldo e limite diário suficientes, e geram
+  exatamente um débito. Recusas não alteram saldo nem consomem limite diário.
+- A meta de recusas usa `ROUND_HALF_UP`. A regra sintética preenche a meta apenas
+  quando a tentativa seria válida; restrições legítimas podem elevar o total
+  real e são contabilizadas como recusas adicionais.
+- `event_at` e `ingested_at` são atrasos determinísticos curtos em relação a
+  `effective_at`; eventos atrasados de negócio ainda não são gerados.
 - Cada transação aprovada pode receber no máximo um estorno, que deve referenciar
   a transação original, ser integral e compensar seu efeito.
 - Transferências geram efeitos equivalentes e opostos na origem e no destino.
@@ -46,7 +53,7 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   `.gitignore`.
 - A exportação rejeita caminhos absolutos, escapes da raiz do projeto e
   diretórios de saída localizados dentro de `src/` ou `.git/`.
-- Uma execução válida é publicada atomicamente como um diretório contendo seis
+- Uma execução válida é publicada atomicamente como um diretório contendo sete
   CSVs e `manifest.json`. O manifesto registra versões, parâmetros, contagens,
   tamanhos e checksums SHA-256 sem dados pessoais ou valores variáveis no tempo.
 - O caminho inclui a versão do schema batch. O manifesto registra agregados

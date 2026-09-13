@@ -62,7 +62,7 @@ Consulte o [modelo de domínio](domain-model.md), as
 - CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
   erros esperados.
 - Manifesto JSON determinístico com versões, parâmetros, contagens, tamanhos e
-  checksums SHA-256 dos seis CSVs, além de invariantes contábeis e resumos de
+  checksums SHA-256 dos sete CSVs, além de invariantes contábeis e resumos de
   cartões e estabelecimentos.
 - Publicação conjunta por diretório de staging irmão, com manifesto escrito por
   último e exposição do caminho final somente após sucesso integral.
@@ -82,6 +82,10 @@ Consulte o [modelo de domínio](domain-model.md), as
   cartões exclusivamente de débito, sem credenciais ou identificadores oficiais.
 - Contrato batch `1.2.0`, gerador `0.3.0`, com `cards.csv` e `merchants.csv`
   integrados à publicação atômica e ao manifesto.
+- Tentativas determinísticas de compra com aprovações, recusas coerentes, limite
+  diário recalculável e débitos apenas para aprovações.
+- Contrato batch `1.3.0`, gerador `0.4.0`, com `transactions.csv`, agregados no
+  manifesto e reconciliação do saldo final pelo ledger completo.
 
 ## Testes e validações disponíveis
 
@@ -102,24 +106,24 @@ Consulte o [modelo de domínio](domain-model.md), as
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
 - Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
   datas, limites, bloqueio e schemas de cartões e estabelecimentos.
-- pytest: 125 testes passando na execução atual com Python 3.14.4.
+- pytest: 138 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
 
 ## Limitações conhecidas
 
-- Transações e transferências ainda não foram implementadas.
-- O ledger publicado contém somente lançamentos de abertura; saldos continuam
-  derivados em memória e não são publicados como entidade independente.
-- Ainda não existem schemas PyArrow para transações e transferências.
+- Estornos e transferências ainda não foram implementados.
+- O ledger publicado contém aberturas e débitos das compras aprovadas; saldos
+  continuam derivados em memória e não são publicados como entidade independente.
+- Ainda não existem schemas PyArrow para estornos e transferências.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir os primeiros eventos financeiros como próximo incremento. Compras,
-transferências e demais tipos de lançamento permanecem fora da etapa concluída.
+Implementar estornos integrais na etapa 9B. Transferências e demais tipos de
+lançamento permanecem fora da etapa concluída.
 
 ## Comandos principais
 

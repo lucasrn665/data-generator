@@ -83,3 +83,21 @@ CARD_SCHEMA = pa.schema(
         pa.field("currency", pa.string(), nullable=False),
     ]
 )
+
+TRANSACTION_SCHEMA = pa.schema(
+    [
+        pa.field("transaction_id", pa.string(), nullable=False),
+        pa.field("account_id", pa.string(), nullable=False),
+        pa.field("card_id", pa.string(), nullable=False),
+        pa.field("merchant_id", pa.string(), nullable=False),
+        pa.field("transaction_type", pa.string(), nullable=False),
+        pa.field("status", pa.string(), nullable=False),
+        pa.field("amount", pa.decimal128(18, 2), nullable=False),
+        pa.field("currency", pa.string(), nullable=False),
+        pa.field("effective_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("event_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("ingested_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("decline_reason", pa.string(), nullable=True),
+        pa.field("original_transaction_id", pa.string(), nullable=True),
+    ]
+)

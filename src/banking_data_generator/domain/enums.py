@@ -29,6 +29,7 @@ class LedgerEntryType(StrEnum):
     """Tipos de lançamento admitidos no subledger atual."""
 
     OPENING_BALANCE = "opening_balance"
+    CARD_PURCHASE = "card_purchase"
 
 
 class EntryDirection(StrEnum):
@@ -83,3 +84,20 @@ MERCHANT_CATEGORY_CODES: dict[MerchantCategory, str] = {
     MerchantCategory.FUEL: "SYN-MCC-FUEL",
     MerchantCategory.RETAIL: "SYN-MCC-RETAIL",
 }
+
+
+class TransactionType(StrEnum):
+    CARD_PURCHASE = "card_purchase"
+
+
+class TransactionStatus(StrEnum):
+    APPROVED = "approved"
+    DECLINED = "declined"
+
+
+class DeclineReason(StrEnum):
+    CARD_BLOCKED = "card_blocked"
+    INSUFFICIENT_FUNDS = "insufficient_funds"
+    DAILY_LIMIT_EXCEEDED = "daily_limit_exceeded"
+    MERCHANT_INACTIVE = "merchant_inactive"
+    SYNTHETIC_RISK_RULE = "synthetic_risk_rule"
