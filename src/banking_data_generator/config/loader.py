@@ -1,15 +1,17 @@
 """Carregamento e validação da configuração YAML."""
 
+import os
 from collections.abc import Mapping
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Never
 
 import yaml
 
 from banking_data_generator.config.models import (
     AccountsConfig,
+    AdlsConfig,
     BankingDataGeneratorConfig,
     CardsConfig,
     CustomersConfig,
@@ -28,6 +30,7 @@ _ROOT_FIELDS = {
     "reference_date",
     "currency",
     "output",
+    "adls",
     "customers",
     "accounts",
     "merchants",
@@ -37,6 +40,7 @@ _ROOT_FIELDS = {
     "quality",
 }
 _OUTPUT_FIELDS = {"directory", "format"}
+_ADLS_FIELDS = {"enabled", "account_url", "file_system", "base_directory", "overwrite"}
 _CUSTOMERS_FIELDS = {"count"}
 _ACCOUNTS_FIELDS = {"min_per_customer", "max_per_customer", "initial_balance"}
 _INITIAL_BALANCE_FIELDS = {"min", "max"}
@@ -137,9 +141,11 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         raise ConfigError(f"YAML inválido em '{config_path}': {error}") from error
 
     root = _mapping(raw, "config")
+    _apply_adls_environment(root)
     _validate_fields(root, _ROOT_FIELDS, "config")
 
     output = _mapping(root["output"], "output")
+    adls = _mapping(root["adls"], "adls")
     customers = _mapping(root["customers"], "customers")
     accounts = _mapping(root["accounts"], "accounts")
     merchants = _mapping(root["merchants"], "merchants")
@@ -149,6 +155,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     quality = _mapping(root["quality"], "quality")
 
     _validate_fields(output, _OUTPUT_FIELDS, "output")
+    _validate_fields(adls, _ADLS_FIELDS, "adls")
     _validate_fields(customers, _CUSTOMERS_FIELDS, "customers")
     _validate_fields(accounts, _ACCOUNTS_FIELDS, "accounts")
     initial_balance = _mapping(accounts["initial_balance"], "accounts.initial_balance")
@@ -178,6 +185,13 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     _validate_fields(
         daily_limit, _DAILY_PURCHASE_LIMIT_FIELDS, "cards.daily_purchase_limit"
     )
+    adls_url = _non_empty_string(adls["account_url"], "adls.account_url")
+    adls_filesystem = _adls_name(adls["file_system"], "adls.file_system")
+    adls_base = _relative_remote_path(adls["base_directory"], "adls.base_directory")
+    if not adls_url.startswith("https://") or not adls_url.removesuffix("/").endswith(
+        ".dfs.core.windows.net"
+    ):
+        _fail("adls.account_url", "deve usar HTTPS e host .dfs.core.windows.net")
 
     minimum_balance = _money(initial_balance["min"], "accounts.initial_balance.min")
     maximum_balance = _money(initial_balance["max"], "accounts.initial_balance.max")
@@ -279,6 +293,13 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         output=OutputConfig(
             directory=Path(_non_empty_string(output["directory"], "output.directory")),
             format=_choice(output["format"], "output.format", {"csv"}),
+        ),
+        adls=AdlsConfig(
+            enabled=_bool(adls["enabled"], "adls.enabled"),
+            account_url=adls_url.removesuffix("/"),
+            file_system=adls_filesystem,
+            base_directory=adls_base,
+            overwrite=_bool(adls["overwrite"], "adls.overwrite"),
         ),
         customers=CustomersConfig(
             count=_non_negative_int(customers["count"], "customers.count")
@@ -450,6 +471,54 @@ def _optional_string(value: Any, path: str) -> str | None:
     if value is None:
         return None
     return _non_empty_string(value, path)
+
+
+def _bool(value: Any, path: str) -> bool:
+    if not isinstance(value, bool):
+        _fail(path, "deve ser booleano")
+    return value
+
+
+def _relative_remote_path(value: Any, path: str) -> str:
+    text = _non_empty_string(value, path)
+    pure = Path(text)
+    if (
+        pure.is_absolute()
+        or PureWindowsPath(text).is_absolute()
+        or ".." in pure.parts
+        or text in {".", ".."}
+        or any(not part for part in text.replace("\\", "/").split("/"))
+    ):
+        _fail(path, "deve ser um caminho relativo sem '..' ou segmentos vazios")
+    return text.strip("/")
+
+
+def _adls_name(value: Any, path: str) -> str:
+    text = _non_empty_string(value, path)
+    if "/" in text or "\\" in text or text in {".", ".."}:
+        _fail(path, "deve ser um nome simples sem separadores de caminho")
+    return text
+
+
+def _apply_adls_environment(root: Mapping[str, Any]) -> None:
+    adls = root.get("adls")
+    if not isinstance(adls, dict):
+        return
+    mappings = {
+        "BANKING_GENERATOR_ADLS_ENABLED": "enabled",
+        "BANKING_GENERATOR_ADLS_ACCOUNT_URL": "account_url",
+        "BANKING_GENERATOR_ADLS_FILE_SYSTEM": "file_system",
+        "BANKING_GENERATOR_ADLS_BASE_DIRECTORY": "base_directory",
+        "BANKING_GENERATOR_ADLS_OVERWRITE": "overwrite",
+    }
+    for variable, field in mappings.items():
+        if variable in os.environ:
+            value = os.environ[variable]
+            if field in {"enabled", "overwrite"}:
+                if value.lower() not in {"true", "false"}:
+                    _fail(variable, "deve ser true ou false")
+                value = value.lower() == "true"
+            adls[field] = value
 
 
 def _choice(value: Any, path: str, choices: set[str]) -> str:

@@ -12,6 +12,8 @@ dependencies = [
     "Faker>=28,<40",
     "pyarrow>=17,<24",
     "PyYAML>=6,<7",
+    "azure-identity>=1.17,<2",
+    "azure-storage-file-datalake>=12.14,<13",
 ]
 
 [project.optional-dependencies]

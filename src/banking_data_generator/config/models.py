@@ -15,6 +15,17 @@ class OutputConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class AdlsConfig:
+    """Destino opcional do Azure Data Lake Storage Gen2."""
+
+    enabled: bool
+    account_url: str
+    file_system: str
+    base_directory: str
+    overwrite: bool
+
+
+@dataclass(frozen=True, slots=True)
 class CustomersConfig:
     """Parâmetros para a futura geração de clientes."""
 
@@ -116,6 +127,7 @@ class BankingDataGeneratorConfig:
     reference_date: date
     currency: str
     output: OutputConfig
+    adls: AdlsConfig
     customers: CustomersConfig
     accounts: AccountsConfig
     merchants: MerchantsConfig

@@ -54,7 +54,7 @@ def test_schema_scenarios_are_deterministic_and_target_transactions(
 
     assert not second.created
     assert first.transactions_file.read_bytes() == second.transactions_file.read_bytes()
-    assert manifest["schema_version"] == "1.7.1"
+    assert manifest["schema_version"] == "1.7.2"
     assert manifest["quality_summary"]["target_entity"] == "transactions"
     if scenario == "schema_additive_column":
         assert header[-1] == expected_columns

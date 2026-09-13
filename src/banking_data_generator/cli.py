@@ -10,7 +10,13 @@ import pyarrow as pa
 
 from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import ConfigError, load_config
-from banking_data_generator.export import ManifestValidationError, UnsafeOutputPath
+from banking_data_generator.export import (
+    AzureAdlsDestination,
+    ManifestValidationError,
+    RemotePublicationError,
+    UnsafeOutputPath,
+    remote_batch_path,
+)
 from banking_data_generator.generation import TransferGenerationError
 from banking_data_generator.pipeline import (
     BatchPipelineResult,
@@ -53,6 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
         description=("Gera o domínio bancário sintético atual em nove arquivos CSV."),
     )
     parser.add_argument(
+        "--publish-adls",
+        action="store_true",
+        help="publique a execução local no Azure Data Lake Storage Gen2",
+    )
+    parser.add_argument(
         "--config",
         type=Path,
         required=True,
@@ -90,6 +101,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             config, quality=replace(config.quality, scenario=arguments.scenario)
         )
         result = run_batch_pipeline(config, project_root)
+        remote = None
+        if arguments.publish_adls:
+            if not config.adls.enabled:
+                raise CliInputError("ADLS está desabilitado na configuração")
+            remote = AzureAdlsDestination(config.adls).publish(
+                result.output_directory,
+                remote_batch_path(result.output_directory),
+                config.adls.overwrite,
+            )
     except (
         CliInputError,
         AccountingError,
@@ -104,6 +124,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ManifestValidationError,
         QualityScenarioError,
         UnsafeOutputPath,
+        RemotePublicationError,
         OSError,
         pa.ArrowException,
     ) as error:
@@ -111,6 +132,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     print_success_summary(result)
+    if remote is not None:
+        print(f"publicação ADLS: {remote.state}")
+        print(f"destino ADLS: {remote.path}")
+        print(f"arquivos ADLS: {remote.file_count}")
     return 0
 
 

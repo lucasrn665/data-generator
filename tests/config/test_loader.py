@@ -30,6 +30,11 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.reference_date == date(2026, 1, 1)
     assert config.currency == "BRL"
     assert config.output.directory == Path("data/output")
+    assert config.adls.enabled is False
+    assert config.adls.account_url == "https://example.dfs.core.windows.net"
+    assert config.adls.file_system == "synthetic-data"
+    assert config.adls.base_directory == "banking"
+    assert config.adls.overwrite is False
     assert config.output.format == "csv"
     assert config.accounts.initial_balance.min == Decimal("100.00")
     assert config.accounts.initial_balance.max == Decimal("50000.00")
@@ -83,6 +88,19 @@ def test_rejects_unknown_ingestion_delay_property(
     config = deepcopy(valid_config)
     config["transactions"]["ingestion_delay"]["unknown"] = 1
     with pytest.raises(ConfigError, match="propriedades desconhecidas"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_adls_secret_and_unsafe_values(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    config["adls"]["account_key"] = "not-accepted"
+    with pytest.raises(ConfigError, match="propriedades desconhecidas"):
+        load_config(write_config(tmp_path, config))
+    config = deepcopy(valid_config)
+    config["adls"]["base_directory"] = "../outside"
+    with pytest.raises(ConfigError, match="base_directory"):
         load_config(write_config(tmp_path, config))
 
 

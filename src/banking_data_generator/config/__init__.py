@@ -3,6 +3,7 @@
 from banking_data_generator.config.loader import ConfigError, load_config
 from banking_data_generator.config.models import (
     AccountsConfig,
+    AdlsConfig,
     BankingDataGeneratorConfig,
     CardsConfig,
     CustomersConfig,
@@ -18,6 +19,7 @@ from banking_data_generator.config.models import (
 
 __all__ = [
     "AccountsConfig",
+    "AdlsConfig",
     "BankingDataGeneratorConfig",
     "CardsConfig",
     "ConfigError",

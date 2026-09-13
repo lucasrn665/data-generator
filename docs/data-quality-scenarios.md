@@ -76,7 +76,7 @@ permitidos apenas nesses campos descritivos. FKs órfãs estão limitadas a
 `addresses.customer_id`, `accounts.customer_id`, `cards.account_id` e
 `transactions.merchant_id`.
 
-Cada cenário fica em `scenario=<nome>` sob o schema `1.7.1`; o manifesto registra
+Cada cenário fica em `scenario=<nome>` sob o schema `1.7.2`; o manifesto registra
 contagens original/publicada, seleção, linhas adicionais, chaves duplicadas,
 tipo e quantidade esperada de violações e confirmação da validação canônica.
 

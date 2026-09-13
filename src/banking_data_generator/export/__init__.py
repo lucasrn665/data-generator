@@ -1,5 +1,12 @@
 """Conversão e escrita batch dos dados sintéticos."""
 
+from banking_data_generator.export.adls import (
+    AzureAdlsDestination,
+    RemoteBatchDestination,
+    RemotePublicationError,
+    RemotePublicationResult,
+    remote_batch_path,
+)
 from banking_data_generator.export.csv_writer import (
     BatchPublicationResult,
     write_batch_csv,
@@ -21,6 +28,11 @@ from banking_data_generator.export.tables import (
 __all__ = [
     "BatchCsvPaths",
     "BatchPublicationResult",
+    "AzureAdlsDestination",
+    "RemoteBatchDestination",
+    "RemotePublicationError",
+    "RemotePublicationResult",
+    "remote_batch_path",
     "ManifestValidationError",
     "UnsafeOutputPath",
     "accounts_to_table",

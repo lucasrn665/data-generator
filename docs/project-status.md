@@ -113,6 +113,11 @@ Consulte o [modelo de domínio](domain-model.md), as
 - Contrato batch `1.7.1`, gerador `0.10.0` e contrato de qualidade `1.2.0`,
   com cinco cenários determinísticos de incompatibilidade de schema apenas na
   representação de exportação de `transactions.csv`.
+- Publicação opcional segura no ADLS Gen2 com `DefaultAzureCredential`, staging,
+  validação de checksums e promoção atômica; geração local permanece padrão.
+- Contrato batch `1.7.2`, gerador `0.11.0`, com publicação remota opcional dos
+  arquivos locais no ADLS Gen2. A autenticação usa exclusivamente
+  `DefaultAzureCredential` e não há integração direta com Databricks.
 
 ## Testes e validações disponíveis
 

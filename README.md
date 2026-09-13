@@ -52,7 +52,7 @@ carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.7.1/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.7.2/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 Use `--scenario` para publicar, separadamente, `duplicate_exact`,
 `duplicate_conflicting`, `required_null`, `orphan_foreign_key`, `late_event`,
@@ -75,6 +75,30 @@ watermark e dados fora de ordem, sem implementar Spark, Databricks ou streaming.
 gerador. O diretório `data/output/` fica fora de `src/` e é ignorado pelo Git
 para uso local. A exportação CSV usa diretórios determinísticos por data de
 referência e seed. Toda geração recebe uma seed.
+
+## Publicação opcional no ADLS Gen2
+
+A publicação local continua sendo o padrão. Configure apenas valores não
+secretos em `adls`, execute `az login` e use:
+
+```bash
+python -m banking_data_generator --config configs/default.yaml --publish-adls
+```
+
+A Storage Account deve usar hierarchical namespace. Crie um file system e
+conceda `Storage Blob Data Contributor` no menor escopo necessário. O destino
+usa exclusivamente `DefaultAzureCredential`, compatível com Azure CLI e
+Managed Identity. Chaves, connection strings, SAS e client secrets não são
+aceitos. As variáveis `BANKING_GENERATOR_ADLS_ENABLED`,
+`BANKING_GENERATOR_ADLS_ACCOUNT_URL`, `BANKING_GENERATOR_ADLS_FILE_SYSTEM`,
+`BANKING_GENERATOR_ADLS_BASE_DIRECTORY` e
+`BANKING_GENERATOR_ADLS_OVERWRITE` sobrescrevem valores não secretos.
+
+O conjunto local é validado, enviado para staging e promovido por rename de
+diretório no namespace hierárquico. Login expirado, RBAC insuficiente, DNS
+incorreto e conflito com uma publicação divergente são os problemas mais
+comuns. O Databricks consumirá os CSVs em etapa futura; esta etapa não
+implementa Spark, Event Hubs, Parquet ou código Databricks.
 
 ## Documentação
 

@@ -62,7 +62,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
     expected_directory = (
         root
         / "exports"
-        / "schema_version=1.7.1"
+        / "schema_version=1.7.2"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"

@@ -8,6 +8,13 @@ output:
   directory: data/output
   format: csv
 
+adls:
+  enabled: false
+  account_url: https://example.dfs.core.windows.net
+  file_system: synthetic-data
+  base_directory: banking
+  overwrite: false
+
 customers:
   count: 10000
 
