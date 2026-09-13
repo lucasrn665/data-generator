@@ -48,7 +48,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.7.2"
+        / "schema_version=1.7.3"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -90,8 +90,8 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.approved_fraud_count + result.declined_fraud_count == 15
     assert result.transfer_attempt_count == 20
     assert result.completed_transfer_count + result.declined_transfer_count == 20
-    assert result.generator_version == "0.11.0"
-    assert result.schema_version == "1.7.2"
+    assert result.generator_version == "0.12.0"
+    assert result.schema_version == "1.7.3"
     assert result.scenario == "valid"
     assert result.expected_violation_count == 0
     assert result.created is True

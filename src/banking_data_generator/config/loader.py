@@ -16,6 +16,7 @@ from banking_data_generator.config.models import (
     CardsConfig,
     CustomersConfig,
     DailyPurchaseLimitConfig,
+    EventHubsConfig,
     IngestionDelayConfig,
     InitialBalanceConfig,
     MerchantsConfig,
@@ -31,6 +32,7 @@ _ROOT_FIELDS = {
     "currency",
     "output",
     "adls",
+    "event_hubs",
     "customers",
     "accounts",
     "merchants",
@@ -41,6 +43,14 @@ _ROOT_FIELDS = {
 }
 _OUTPUT_FIELDS = {"directory", "format"}
 _ADLS_FIELDS = {"enabled", "account_url", "file_system", "base_directory", "overwrite"}
+_EVENT_HUBS_FIELDS = {
+    "enabled",
+    "fully_qualified_namespace",
+    "eventhub_name",
+    "events_per_second",
+    "max_batch_size",
+    "starting_position",
+}
 _CUSTOMERS_FIELDS = {"count"}
 _ACCOUNTS_FIELDS = {"min_per_customer", "max_per_customer", "initial_balance"}
 _INITIAL_BALANCE_FIELDS = {"min", "max"}
@@ -142,10 +152,12 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
 
     root = _mapping(raw, "config")
     _apply_adls_environment(root)
+    _apply_event_hubs_environment(root)
     _validate_fields(root, _ROOT_FIELDS, "config")
 
     output = _mapping(root["output"], "output")
     adls = _mapping(root["adls"], "adls")
+    event_hubs = _mapping(root["event_hubs"], "event_hubs")
     customers = _mapping(root["customers"], "customers")
     accounts = _mapping(root["accounts"], "accounts")
     merchants = _mapping(root["merchants"], "merchants")
@@ -156,6 +168,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
 
     _validate_fields(output, _OUTPUT_FIELDS, "output")
     _validate_fields(adls, _ADLS_FIELDS, "adls")
+    _validate_fields(event_hubs, _EVENT_HUBS_FIELDS, "event_hubs")
     _validate_fields(customers, _CUSTOMERS_FIELDS, "customers")
     _validate_fields(accounts, _ACCOUNTS_FIELDS, "accounts")
     initial_balance = _mapping(accounts["initial_balance"], "accounts.initial_balance")
@@ -192,6 +205,26 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         ".dfs.core.windows.net"
     ):
         _fail("adls.account_url", "deve usar HTTPS e host .dfs.core.windows.net")
+    event_namespace = _non_empty_string(
+        event_hubs["fully_qualified_namespace"], "event_hubs.fully_qualified_namespace"
+    )
+    if not event_namespace.removesuffix("/").endswith(".servicebus.windows.net"):
+        _fail(
+            "event_hubs.fully_qualified_namespace",
+            "deve terminar em .servicebus.windows.net",
+        )
+    eventhub_name = _non_empty_string(
+        event_hubs["eventhub_name"], "event_hubs.eventhub_name"
+    )
+    events_per_second = _non_negative_int(
+        event_hubs["events_per_second"], "event_hubs.events_per_second"
+    )
+    max_batch_size = _positive_int(
+        event_hubs["max_batch_size"], "event_hubs.max_batch_size"
+    )
+    starting_position = _choice(
+        event_hubs["starting_position"], "event_hubs.starting_position", {"beginning"}
+    )
 
     minimum_balance = _money(initial_balance["min"], "accounts.initial_balance.min")
     maximum_balance = _money(initial_balance["max"], "accounts.initial_balance.max")
@@ -300,6 +333,14 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
             file_system=adls_filesystem,
             base_directory=adls_base,
             overwrite=_bool(adls["overwrite"], "adls.overwrite"),
+        ),
+        event_hubs=EventHubsConfig(
+            enabled=_bool(event_hubs["enabled"], "event_hubs.enabled"),
+            fully_qualified_namespace=event_namespace.removesuffix("/"),
+            eventhub_name=eventhub_name,
+            events_per_second=events_per_second,
+            max_batch_size=max_batch_size,
+            starting_position=starting_position,
         ),
         customers=CustomersConfig(
             count=_non_negative_int(customers["count"], "customers.count")
@@ -519,6 +560,36 @@ def _apply_adls_environment(root: Mapping[str, Any]) -> None:
                     _fail(variable, "deve ser true ou false")
                 value = value.lower() == "true"
             adls[field] = value
+
+
+def _apply_event_hubs_environment(root: Mapping[str, Any]) -> None:
+    event_hubs = root.get("event_hubs")
+    if not isinstance(event_hubs, dict):
+        return
+    mappings = {
+        "BANKING_GENERATOR_EVENT_HUBS_ENABLED": "enabled",
+        "BANKING_GENERATOR_EVENT_HUBS_FULLY_QUALIFIED_NAMESPACE": (
+            "fully_qualified_namespace"
+        ),
+        "BANKING_GENERATOR_EVENT_HUBS_EVENTHUB_NAME": "eventhub_name",
+        "BANKING_GENERATOR_EVENT_HUBS_EVENTS_PER_SECOND": "events_per_second",
+        "BANKING_GENERATOR_EVENT_HUBS_MAX_BATCH_SIZE": "max_batch_size",
+        "BANKING_GENERATOR_EVENT_HUBS_STARTING_POSITION": "starting_position",
+    }
+    for variable, field in mappings.items():
+        if variable not in os.environ:
+            continue
+        value = os.environ[variable]
+        if field in {"enabled"}:
+            if value.lower() not in {"true", "false"}:
+                _fail(variable, "deve ser true ou false")
+            value = value.lower() == "true"
+        elif field in {"events_per_second", "max_batch_size"}:
+            try:
+                value = int(value)
+            except ValueError:
+                _fail(variable, "deve ser inteiro")
+        event_hubs[field] = value
 
 
 def _choice(value: Any, path: str, choices: set[str]) -> str:

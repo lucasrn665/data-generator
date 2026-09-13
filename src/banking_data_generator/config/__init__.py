@@ -8,6 +8,7 @@ from banking_data_generator.config.models import (
     CardsConfig,
     CustomersConfig,
     DailyPurchaseLimitConfig,
+    EventHubsConfig,
     IngestionDelayConfig,
     InitialBalanceConfig,
     MerchantsConfig,
@@ -20,6 +21,7 @@ from banking_data_generator.config.models import (
 __all__ = [
     "AccountsConfig",
     "AdlsConfig",
+    "EventHubsConfig",
     "BankingDataGeneratorConfig",
     "CardsConfig",
     "ConfigError",

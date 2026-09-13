@@ -15,6 +15,14 @@ adls:
   base_directory: banking
   overwrite: false
 
+event_hubs:
+  enabled: false
+  fully_qualified_namespace: example.servicebus.windows.net
+  eventhub_name: synthetic-events
+  events_per_second: 0
+  max_batch_size: 100
+  starting_position: beginning
+
 customers:
   count: 10000
 

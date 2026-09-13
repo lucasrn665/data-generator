@@ -26,6 +26,18 @@ class AdlsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class EventHubsConfig:
+    """Destino opcional de replay no Azure Event Hubs."""
+
+    enabled: bool
+    fully_qualified_namespace: str
+    eventhub_name: str
+    events_per_second: int
+    max_batch_size: int
+    starting_position: str
+
+
+@dataclass(frozen=True, slots=True)
 class CustomersConfig:
     """Parâmetros para a futura geração de clientes."""
 
@@ -128,6 +140,7 @@ class BankingDataGeneratorConfig:
     currency: str
     output: OutputConfig
     adls: AdlsConfig
+    event_hubs: EventHubsConfig
     customers: CustomersConfig
     accounts: AccountsConfig
     merchants: MerchantsConfig

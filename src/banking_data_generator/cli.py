@@ -12,6 +12,8 @@ from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import ConfigError, load_config
 from banking_data_generator.export import (
     AzureAdlsDestination,
+    AzureEventHubsDestination,
+    EventHubsPublicationError,
     ManifestValidationError,
     RemotePublicationError,
     UnsafeOutputPath,
@@ -64,6 +66,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="publique a execução local no Azure Data Lake Storage Gen2",
     )
     parser.add_argument(
+        "--publish-event-hubs",
+        action="store_true",
+        help="publique o replay financeiro opcional no Azure Event Hubs",
+    )
+    parser.add_argument(
+        "--events-per-second",
+        type=int,
+        default=None,
+        help="limite não secreto de eventos por segundo (0 = sem espera)",
+    )
+    parser.add_argument(
         "--config",
         type=Path,
         required=True,
@@ -110,6 +123,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                 remote_batch_path(result.output_directory),
                 config.adls.overwrite,
             )
+        event_hubs = None
+        if arguments.publish_event_hubs:
+            if not config.event_hubs.enabled:
+                raise CliInputError("Event Hubs está desabilitado na configuração")
+            event_config = config.event_hubs
+            if arguments.events_per_second is not None:
+                if arguments.events_per_second < 0:
+                    raise CliInputError("events-per-second deve ser maior ou igual a 0")
+                event_config = replace(
+                    event_config, events_per_second=arguments.events_per_second
+                )
+            event_hubs = AzureEventHubsDestination().publish(
+                result.replay_events, event_config
+            )
     except (
         CliInputError,
         AccountingError,
@@ -125,6 +152,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         QualityScenarioError,
         UnsafeOutputPath,
         RemotePublicationError,
+        EventHubsPublicationError,
         OSError,
         pa.ArrowException,
     ) as error:
@@ -136,6 +164,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"publicação ADLS: {remote.state}")
         print(f"destino ADLS: {remote.path}")
         print(f"arquivos ADLS: {remote.file_count}")
+    if event_hubs is not None:
+        print(f"publicação Event Hubs: {event_hubs.state}")
+        print(f"eventos planejados: {event_hubs.events_planned}")
+        print(f"eventos enviados: {event_hubs.events_sent}")
+        print(f"lotes enviados: {event_hubs.batches}")
     return 0
 
 

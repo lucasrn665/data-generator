@@ -52,7 +52,7 @@ carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.7.2/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.7.3/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 Use `--scenario` para publicar, separadamente, `duplicate_exact`,
 `duplicate_conflicting`, `required_null`, `orphan_foreign_key`, `late_event`,
@@ -60,6 +60,18 @@ Use `--scenario` para publicar, separadamente, `duplicate_exact`,
 `schema_incompatible_value` ou `schema_unknown_enum`. Sem a opção,
 o cenário é `valid`. Todos mantêm os mesmos nove CSVs; somente o CSV alvo e o
 manifesto diferem do conjunto canônico.
+
+O replay opcional de compras, estornos e transferências usa
+`--publish-event-hubs` e `DefaultAzureCredential`. A entrega é at-least-once;
+consumidores devem deduplicar eventos por `event_id`.
+
+Configure `event_hubs` (namespace `.servicebus.windows.net`, nome do hub,
+`events_per_second` e `max_batch_size`) ou as variáveis
+`BANKING_GENERATOR_EVENT_HUBS_*`. Execute `az login` localmente; em Azure,
+Managed Identity com a função `Azure Event Hubs Data Sender` é suficiente.
+Transferências usam a conta de origem como chave de partição para manter uma
+ordem estável; o destino recebe o mesmo evento lógico. O replay não envia
+clientes ou ledger e não oferece exactly-once.
 
 Em `transactions.csv`, `event_at` representa a ocorrência econômica e
 `ingested_at` representa a chegada à plataforma. O cenário válido usa atraso

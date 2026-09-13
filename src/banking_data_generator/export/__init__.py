@@ -11,6 +11,12 @@ from banking_data_generator.export.csv_writer import (
     BatchPublicationResult,
     write_batch_csv,
 )
+from banking_data_generator.export.event_hubs import (
+    AzureEventHubsDestination,
+    EventHubsDestination,
+    EventHubsPublicationError,
+    EventHubsPublicationResult,
+)
 from banking_data_generator.export.manifest import ManifestValidationError
 from banking_data_generator.export.paths import BatchCsvPaths, UnsafeOutputPath
 from banking_data_generator.export.tables import (
@@ -45,4 +51,8 @@ __all__ = [
     "transaction_labels_to_table",
     "transfers_to_table",
     "write_batch_csv",
+    "AzureEventHubsDestination",
+    "EventHubsDestination",
+    "EventHubsPublicationError",
+    "EventHubsPublicationResult",
 ]

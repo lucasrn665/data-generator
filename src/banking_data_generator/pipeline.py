@@ -3,10 +3,12 @@
 import json
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+
+import pyarrow.csv as pa_csv
 
 from banking_data_generator.accounting import (
     calculate_all_account_balances,
@@ -21,6 +23,7 @@ from banking_data_generator.domain.enums import (
     LedgerEntryType,
 )
 from banking_data_generator.domain.models import Account, Address, Customer
+from banking_data_generator.events import EventEnvelope, build_replay_events
 from banking_data_generator.export import write_batch_csv
 from banking_data_generator.generation import (
     generate_accounts,
@@ -108,6 +111,7 @@ class BatchPipelineResult:
     observed_late_event_count: int
     minimum_observed_delay_seconds: int
     maximum_observed_delay_seconds: int
+    replay_events: tuple[EventEnvelope, ...]
 
 
 def run_batch_pipeline(
@@ -212,6 +216,23 @@ def run_batch_pipeline(
     )
     quality_summary = quality_manifest["quality_summary"]
     late_summary = quality_manifest["late_event_summary"]
+    replay_transactions = transaction_events
+    if config.quality.scenario == "late_event":
+        rows = {
+            row["transaction_id"]: row
+            for row in pa_csv.read_csv(publication.paths.transactions).to_pylist()
+        }
+        replay_transactions = tuple(
+            replace(item, ingested_at=rows[item.transaction_id]["ingested_at"])
+            for item in transaction_events
+        )
+    replay_events = build_replay_events(
+        replay_transactions,
+        transfer_result.transfers,
+        reference_date=config.reference_date.isoformat(),
+        seed=config.seed,
+        scenario=config.quality.scenario,
+    )
     return BatchPipelineResult(
         output_directory=publication.paths.directory,
         customers_file=publication.paths.customers,
@@ -314,6 +335,7 @@ def run_batch_pipeline(
         observed_late_event_count=late_summary["observed_late_event_count"],
         minimum_observed_delay_seconds=late_summary["minimum_observed_delay_seconds"],
         maximum_observed_delay_seconds=late_summary["maximum_observed_delay_seconds"],
+        replay_events=replay_events,
     )
 
 

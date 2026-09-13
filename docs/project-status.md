@@ -118,6 +118,9 @@ Consulte o [modelo de domínio](domain-model.md), as
 - Contrato batch `1.7.2`, gerador `0.11.0`, com publicação remota opcional dos
   arquivos locais no ADLS Gen2. A autenticação usa exclusivamente
   `DefaultAzureCredential` e não há integração direta com Databricks.
+- Contrato batch `1.7.3`, gerador `0.12.0` e schema de eventos `1.0.0`, com
+  replay opcional de eventos financeiros no Azure Event Hubs, envelopes JSON
+  determinísticos e batching; a entrega é at-least-once.
 
 ## Testes e validações disponíveis
 

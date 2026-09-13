@@ -14,6 +14,7 @@ dependencies = [
     "PyYAML>=6,<7",
     "azure-identity>=1.17,<2",
     "azure-storage-file-datalake>=12.14,<13",
+    "azure-eventhub>=5.11,<6",
 ]
 
 [project.optional-dependencies]
