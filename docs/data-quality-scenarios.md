@@ -45,9 +45,29 @@ posteriores.
 - rejeição de reexecuções incompatíveis ou de publicações preexistentes
   incompletas.
 
-## Cenários controlados futuros
+## Cenários controlados implementados
 
-O gerador poderá oferecer cenários opt-in com problemas conhecidos, como valor
-nulo, chave órfã ou duplicidade. Arquivos válidos e arquivos com anomalias
-intencionais deverão ficar em execuções ou cenários separados. Os registros
-anômalos deverão ser claramente marcados e reproduzíveis.
+O contrato de qualidade `1.0.0` oferece um cenário por execução:
+
+- `duplicate_exact`: acrescenta cópias completas com a mesma chave primária;
+- `duplicate_conflicting`: acrescenta cópias com a mesma chave e um campo
+  descritivo diferente, marcado por `[CONFLITO-SINTETICO]`;
+- `required_null`: anula um campo descritivo obrigatório somente na tabela de
+  publicação, sem alterar o schema canônico;
+- `orphan_foreign_key`: substitui uma FK autorizada por `SYN-MISSING-*`.
+
+A seleção usa uma seed exclusiva por cenário. A quantidade é a contagem da
+entidade multiplicada pela taxa e arredondada com `ROUND_HALF_UP`; não existe
+mínimo implícito, portanto uma taxa positiva pode resultar em zero. Objetos e
+tabelas canônicas não são mutados. Ledger, transferências e ground truth de
+fraude nunca são alvos nesta versão.
+
+Campos conflitantes autorizados são nomes sintéticos de clientes e
+estabelecimentos e atributos textuais de endereço/estabelecimento. Nulos são
+permitidos apenas nesses campos descritivos. FKs órfãs estão limitadas a
+`addresses.customer_id`, `accounts.customer_id`, `cards.account_id` e
+`transactions.merchant_id`.
+
+Cada cenário fica em `scenario=<nome>` sob o schema `1.6.1`; o manifesto registra
+contagens original/publicada, seleção, linhas adicionais, chaves duplicadas,
+tipo e quantidade esperada de violações e confirmação da validação canônica.

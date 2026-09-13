@@ -81,6 +81,11 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   contábeis, incluindo totais monetários como strings com duas casas decimais.
 - Reexecuções idênticas validam e reutilizam a publicação existente. Conjuntos
   ausentes, inválidos ou divergentes não são sobrescritos.
+- Cenários de qualidade são derivados somente depois da validação e
+  reconciliação do conjunto canônico. Um cenário por execução altera apenas a
+  tabela alvo; os demais CSVs permanecem byte a byte iguais ao cenário válido.
+- Duplicatas, nulos obrigatórios e FKs órfãs usam alvos fechados e nunca alteram
+  valores monetários, ledger, transferências ou rótulos de fraude.
 - Configurações e dados gerados não contêm credenciais.
 
 ## Semântica das taxas de transação

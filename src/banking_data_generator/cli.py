@@ -3,6 +3,7 @@
 import argparse
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pyarrow as pa
@@ -16,6 +17,7 @@ from banking_data_generator.pipeline import (
     DatasetValidationError,
     run_batch_pipeline,
 )
+from banking_data_generator.quality import QualityScenarioError
 from banking_data_generator.validation import (
     ExtendedDomainValidationError,
     FraudLabelValidationError,
@@ -29,6 +31,15 @@ class CliInputError(ValueError):
     """Indica uma entrada inválida específica da CLI."""
 
 
+_SCENARIOS = (
+    "valid",
+    "duplicate_exact",
+    "duplicate_conflicting",
+    "required_null",
+    "orphan_foreign_key",
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construa o parser público da linha de comando."""
     parser = argparse.ArgumentParser(
@@ -40,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         required=True,
         help="caminho do arquivo YAML de configuração",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=_SCENARIOS,
+        default="valid",
+        help="cenário de qualidade exclusivo a publicar (padrão: valid)",
     )
     parser.add_argument(
         "--project-root",
@@ -63,6 +80,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not config_path.is_absolute():
             config_path = project_root / config_path
         config = load_config(config_path)
+        config = replace(
+            config, quality=replace(config.quality, scenario=arguments.scenario)
+        )
         result = run_batch_pipeline(config, project_root)
     except (
         CliInputError,
@@ -76,6 +96,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         TransferValidationError,
         TransferGenerationError,
         ManifestValidationError,
+        QualityScenarioError,
         UnsafeOutputPath,
         OSError,
         pa.ArrowException,
@@ -137,6 +158,12 @@ def print_success_summary(result: BatchPipelineResult) -> None:
     print(f"créditos de abertura: {result.opening_credit_total:.2f} BRL")
     print(f"versão do gerador: {result.generator_version}")
     print(f"versão do schema: {result.schema_version}")
+    print(f"cenário: {result.scenario}")
+    print(f"entidade-alvo de qualidade: {result.quality_target_entity}")
+    if result.quality_target_field is not None:
+        print(f"campo-alvo de qualidade: {result.quality_target_field}")
+    print(f"registros afetados: {result.quality_affected_count}")
+    print(f"violações esperadas: {result.expected_violation_count}")
     publication = "criada" if result.created else "idempotente já existente"
     print(f"publicação: {publication}")
     print(f"diretório de saída: {result.output_directory}")

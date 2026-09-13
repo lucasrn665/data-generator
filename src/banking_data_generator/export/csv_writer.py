@@ -58,6 +58,7 @@ from banking_data_generator.export.tables import (
     transfers_to_table,
 )
 from banking_data_generator.generation import generate_cards, generate_merchants
+from banking_data_generator.quality import apply_quality_scenario
 from banking_data_generator.validation import (
     calculate_net_daily_consumption,
     reconcile_purchase_balances,
@@ -366,7 +367,7 @@ def write_batch_csv(
         "aggregate_balance_after_transfers": f"{balance_after_total:.2f}",
         "reconciliation_failure_count": 0,
     }
-    tables = {
+    canonical_tables = {
         "customers.csv": customers_to_table(customers),
         "addresses.csv": addresses_to_table(addresses),
         "accounts.csv": accounts_to_table(accounts),
@@ -377,16 +378,38 @@ def write_batch_csv(
         "transfers.csv": transfers_to_table(transfers),
         "ledger_entries.csv": ledger_entries_to_table(ledger_entries),
     }
+    quality_result = apply_quality_scenario(canonical_tables, config)
+    tables = quality_result.tables
     record_counts = {
-        "customers": len(customers),
-        "addresses": len(addresses),
-        "accounts": len(accounts),
-        "cards": len(cards),
-        "merchants": len(merchants),
-        "transactions": len(transactions),
-        "transaction_labels": len(transaction_labels),
-        "transfers": len(transfers),
-        "ledger_entries": len(ledger_entries),
+        entity: tables[filename].num_rows
+        for entity, filename in {
+            "customers": "customers.csv",
+            "addresses": "addresses.csv",
+            "accounts": "accounts.csv",
+            "cards": "cards.csv",
+            "merchants": "merchants.csv",
+            "transactions": "transactions.csv",
+            "transaction_labels": "transaction_labels.csv",
+            "transfers": "transfers.csv",
+            "ledger_entries": "ledger_entries.csv",
+        }.items()
+    }
+    quality_summary: dict[str, Any] = {
+        "quality_scenario_version": quality_result.version,
+        "scenario": quality_result.scenario,
+        "target_entity": quality_result.target_entity,
+        "target_field": quality_result.target_field,
+        "configured_rate": str(quality_result.configured_rate),
+        "calculated_count": quality_result.calculated_count,
+        "affected_count": quality_result.affected_count,
+        "expected_violation_count": quality_result.expected_violation_count,
+        "expected_violation_type": quality_result.expected_violation_type,
+        "original_record_count": quality_result.original_count,
+        "published_record_count": quality_result.published_count,
+        "selected_record_count": quality_result.selected_record_count,
+        "additional_row_count": quality_result.additional_row_count,
+        "duplicate_key_count": quality_result.duplicate_key_count,
+        "canonical_validation_passed": quality_result.canonical_validation_passed,
     }
     final_paths = build_batch_csv_paths(config, project_root=project_root)
     final_paths.directory.parent.mkdir(parents=True, exist_ok=True)
@@ -406,6 +429,7 @@ def write_batch_csv(
             transaction_summary,
             transfer_summary,
             fraud_label_summary,
+            quality_summary,
         )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)

@@ -52,4 +52,10 @@ transfers:
   declined_rate_overall: 0.03
   history_days: 365
 
+quality:
+  scenario: valid
+  rate: 0.01
+  entity: customers
+  field: synthetic_name
+
 # Endereços não possuem configuração própria nesta etapa.

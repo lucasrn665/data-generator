@@ -1,5 +1,6 @@
 """Orquestração do pipeline batch disponível atualmente."""
 
+import json
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -98,6 +99,11 @@ class BatchPipelineResult:
     generator_version: str
     schema_version: str
     created: bool
+    scenario: str
+    quality_target_entity: str
+    quality_target_field: str | None
+    quality_affected_count: int
+    expected_violation_count: int
 
 
 def run_batch_pipeline(
@@ -197,6 +203,9 @@ def run_batch_pipeline(
         transfers=transfer_result.transfers,
         project_root=project_root,
     )
+    quality_manifest = json.loads(
+        publication.paths.manifest.read_text(encoding="utf-8")
+    )["quality_summary"]
     return BatchPipelineResult(
         output_directory=publication.paths.directory,
         customers_file=publication.paths.customers,
@@ -290,6 +299,11 @@ def run_batch_pipeline(
         generator_version=publication.generator_version,
         schema_version=publication.schema_version,
         created=publication.created,
+        scenario=config.quality.scenario,
+        quality_target_entity=quality_manifest["target_entity"],
+        quality_target_field=quality_manifest["target_field"],
+        quality_affected_count=quality_manifest["affected_count"],
+        expected_violation_count=quality_manifest["expected_violation_count"],
     )
 
 

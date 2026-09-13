@@ -47,6 +47,10 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.transfers.max_amount == Decimal("1000.00")
     assert config.transfers.declined_rate_overall == Decimal("0.03")
     assert config.transfers.history_days == 365
+    assert config.quality.scenario == "valid"
+    assert config.quality.rate == Decimal("0.01")
+    assert config.quality.entity == "customers"
+    assert config.quality.field == "synthetic_name"
 
 
 def test_rejects_missing_config_file(tmp_path: Path) -> None:
@@ -118,6 +122,7 @@ def test_rejects_empty_output_directory(
         ("merchants", "count", "propriedades obrigatórias ausentes: count"),
         ("cards", "per_account", "propriedades obrigatórias ausentes: per_account"),
         ("transfers", "count", "propriedades obrigatórias ausentes: count"),
+        ("quality", "scenario", "propriedades obrigatórias ausentes: scenario"),
     ],
 )
 def test_rejects_missing_required_fields(
@@ -145,6 +150,66 @@ def test_rejects_unknown_nested_property(
     transactions["unexpected"] = True
 
     with pytest.raises(ConfigError, match="propriedades desconhecidas: unexpected"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("scenario", "combined"),
+        ("rate", -0.01),
+        ("rate", 1.01),
+        ("entity", "ledger_entries"),
+    ],
+)
+def test_rejects_invalid_quality_configuration(
+    tmp_path: Path,
+    valid_config: dict[str, object],
+    field: str,
+    value: object,
+) -> None:
+    config = deepcopy(valid_config)
+    quality = config["quality"]
+    assert isinstance(quality, dict)
+    quality[field] = value
+
+    with pytest.raises(ConfigError, match=f"quality.{field}"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_unknown_quality_property(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    quality = config["quality"]
+    assert isinstance(quality, dict)
+    quality["combine"] = True
+
+    with pytest.raises(ConfigError, match="propriedades desconhecidas: combine"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize(
+    ("scenario", "entity", "field"),
+    [
+        ("duplicate_conflicting", "accounts", "opening_balance"),
+        ("required_null", "customers", "customer_id"),
+        ("orphan_foreign_key", "transfers", "source_account_id"),
+    ],
+)
+def test_rejects_unsafe_quality_targets(
+    tmp_path: Path,
+    valid_config: dict[str, object],
+    scenario: str,
+    entity: str,
+    field: str,
+) -> None:
+    config = deepcopy(valid_config)
+    quality = config["quality"]
+    assert isinstance(quality, dict)
+    quality.update(scenario=scenario, entity=entity, field=field)
+
+    with pytest.raises(ConfigError, match="quality"):
         load_config(write_config(tmp_path, config))
 
 

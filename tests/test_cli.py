@@ -16,6 +16,7 @@ def cli_project(tmp_path: Path) -> Path:
     contents = contents.replace("count: 10000", "count: 4", 1)
     contents = contents.replace("count: 100000", "count: 20", 1)
     contents = contents.replace("transfers:\n  count: 10000", "transfers:\n  count: 20")
+    contents = contents.replace("rate: 0.01", "rate: 0.50")
     (config_directory / "test.yaml").write_text(contents, encoding="utf-8")
     return tmp_path
 
@@ -41,6 +42,13 @@ def test_missing_required_argument_returns_argparse_error(
     error = capsys.readouterr().err
     assert "--config" in error
     assert "Traceback" not in error
+
+
+def test_cli_rejects_unknown_scenario(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as raised:
+        cli_module.main(["--config", "config.yaml", "--scenario", "combined"])
+    assert raised.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err
 
 
 def test_valid_cli_run_prints_summary_and_preserves_cwd(
@@ -81,8 +89,9 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "transferências concluídas:" in captured.out
     assert "meta de fraude sintética:" in captured.out
     assert "fraudes sintéticas efetivas:" in captured.out
-    assert "versão do gerador: 0.7.0" in captured.out
-    assert "versão do schema: 1.6.0" in captured.out
+    assert "versão do gerador: 0.8.0" in captured.out
+    assert "versão do schema: 1.6.1" in captured.out
+    assert "cenário: valid" in captured.out
     assert "publicação: criada" in captured.out
     assert (
         "merchants.csv, transactions.csv, transaction_labels.csv, transfers.csv, "
@@ -93,7 +102,7 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.6.0"
+        / "schema_version=1.6.1"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -113,6 +122,35 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
 
     assert cli_module.main(["--config", "configs/test.yaml"]) == 0
     assert "publicação: idempotente já existente" in capsys.readouterr().out
+
+
+def test_cli_publishes_selected_scenario(
+    cli_project: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = cli_module.main(
+        [
+            "--config",
+            "configs/test.yaml",
+            "--project-root",
+            str(cli_project),
+            "--scenario",
+            "duplicate_exact",
+        ]
+    )
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert "cenário: duplicate_exact" in output
+    assert "violações esperadas:" in output
+    directory = (
+        cli_project
+        / "output"
+        / "schema_version=1.6.1"
+        / "reference_date=2026-01-01"
+        / "seed=42"
+        / "scenario=duplicate_exact"
+    )
+    assert directory.is_dir()
 
 
 @pytest.mark.parametrize(

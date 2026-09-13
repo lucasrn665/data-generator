@@ -102,6 +102,11 @@ Consulte o [modelo de domínio](domain-model.md), as
   decimais e seed isolada.
 - Contrato batch `1.6.0`, gerador `0.7.0` e rótulos `1.0.0`, com
   `transaction_labels.csv` integrado à publicação atômica dos nove CSVs.
+- Cenários determinísticos e mutuamente exclusivos para duplicatas exatas,
+  duplicatas conflitantes, nulos obrigatórios e FKs órfãs, derivados somente do
+  conjunto canônico reconciliado.
+- Contrato batch `1.6.1`, gerador `0.8.0` e contrato de qualidade `1.0.0`, com
+  separação por `scenario=<nome>` e idempotência integral por cenário.
 
 ## Testes e validações disponíveis
 
@@ -122,7 +127,7 @@ Consulte o [modelo de domínio](domain-model.md), as
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
 - Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
   datas, limites, bloqueio e schemas de cartões e estabelecimentos.
-- pytest: 172 testes passando na execução atual com Python 3.14.4.
+- pytest: 195 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
@@ -136,12 +141,13 @@ Consulte o [modelo de domínio](domain-model.md), as
 - A fraude é uma classificação sintética baseada em três padrões controlados;
   não há geolocalização impossível, identidade roubada ou modelo de ML.
 - A configuração aceita somente BRL e CSV.
-- Cenários de anomalia e streaming estão apenas documentados.
+- Combinação de cenários, corrupção monetária/contábil e streaming permanecem
+  fora do escopo.
 
 ## Próxima etapa planejada
 
-Implementar separadamente os próximos cenários de qualidade sem introduzir
-anomalias no conjunto válido desta etapa.
+Ampliar cenários de qualidade em etapas separadas, preservando o conjunto
+válido e sem combinar mutações nesta versão.
 
 ## Comandos principais
 

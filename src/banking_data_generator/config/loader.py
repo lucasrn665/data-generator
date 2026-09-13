@@ -17,6 +17,7 @@ from banking_data_generator.config.models import (
     InitialBalanceConfig,
     MerchantsConfig,
     OutputConfig,
+    QualityConfig,
     TransactionsConfig,
     TransfersConfig,
 )
@@ -32,6 +33,7 @@ _ROOT_FIELDS = {
     "cards",
     "transactions",
     "transfers",
+    "quality",
 }
 _OUTPUT_FIELDS = {"directory", "format"}
 _CUSTOMERS_FIELDS = {"count"}
@@ -56,6 +58,38 @@ _TRANSFERS_FIELDS = {
     "max_amount",
     "declined_rate_overall",
     "history_days",
+}
+_QUALITY_FIELDS = {"scenario", "rate", "entity", "field"}
+_QUALITY_SCENARIOS = {
+    "valid",
+    "duplicate_exact",
+    "duplicate_conflicting",
+    "required_null",
+    "orphan_foreign_key",
+}
+_QUALITY_ENTITIES = {
+    "customers",
+    "addresses",
+    "accounts",
+    "cards",
+    "merchants",
+    "transactions",
+}
+_CONFLICTING_FIELDS = {
+    "customers": {"synthetic_name"},
+    "addresses": {"street", "neighborhood", "city", "state", "country"},
+    "merchants": {"synthetic_name", "city", "state", "country"},
+}
+_REQUIRED_NULL_FIELDS = {
+    "customers": {"synthetic_name", "synthetic_email"},
+    "addresses": {"street", "neighborhood", "city", "state", "country"},
+    "merchants": {"synthetic_name", "city", "state", "country"},
+}
+_ORPHAN_FIELDS = {
+    "addresses": {"customer_id"},
+    "accounts": {"customer_id"},
+    "cards": {"account_id"},
+    "transactions": {"merchant_id"},
 }
 _ZERO = Decimal("0")
 _ONE = Decimal("1")
@@ -90,6 +124,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     cards = _mapping(root["cards"], "cards")
     transactions = _mapping(root["transactions"], "transactions")
     transfers = _mapping(root["transfers"], "transfers")
+    quality = _mapping(root["quality"], "quality")
 
     _validate_fields(output, _OUTPUT_FIELDS, "output")
     _validate_fields(customers, _CUSTOMERS_FIELDS, "customers")
@@ -102,6 +137,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     )
     _validate_fields(transactions, _TRANSACTIONS_FIELDS, "transactions")
     _validate_fields(transfers, _TRANSFERS_FIELDS, "transfers")
+    _validate_fields(quality, _QUALITY_FIELDS, "quality")
     purchase_amount = _mapping(
         transactions["purchase_amount"], "transactions.purchase_amount"
     )
@@ -157,6 +193,12 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     )
     if minimum_transfer <= _ZERO:
         _fail("transfers.min_amount", "deve ser maior que 0.00")
+    quality_scenario = _choice(
+        quality["scenario"], "quality.scenario", _QUALITY_SCENARIOS
+    )
+    quality_entity = _choice(quality["entity"], "quality.entity", _QUALITY_ENTITIES)
+    quality_field = _optional_string(quality["field"], "quality.field")
+    _validate_quality_target(quality_scenario, quality_entity, quality_field)
 
     minimum_accounts = _positive_int(
         accounts["min_per_customer"], "accounts.min_per_customer"
@@ -240,7 +282,28 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
                 transfers["history_days"], "transfers.history_days"
             ),
         ),
+        quality=QualityConfig(
+            scenario=quality_scenario,
+            rate=_rate(quality["rate"], "quality.rate"),
+            entity=quality_entity,
+            field=quality_field,
+        ),
     )
+
+
+def _validate_quality_target(scenario: str, entity: str, field: str | None) -> None:
+    allowed: dict[str, dict[str, set[str]]] = {
+        "duplicate_conflicting": _CONFLICTING_FIELDS,
+        "required_null": _REQUIRED_NULL_FIELDS,
+        "orphan_foreign_key": _ORPHAN_FIELDS,
+    }
+    if scenario not in allowed:
+        return
+    if field is None or field not in allowed[scenario].get(entity, set()):
+        _fail(
+            "quality",
+            f"combinação de entidade e campo não permitida para '{scenario}'",
+        )
 
 
 def _mapping(value: Any, path: str) -> Mapping[str, Any]:
@@ -321,6 +384,12 @@ def _non_empty_string(value: Any, path: str) -> str:
     if not isinstance(value, str) or not value.strip():
         _fail(path, "deve ser uma string não vazia")
     return value
+
+
+def _optional_string(value: Any, path: str) -> str | None:
+    if value is None:
+        return None
+    return _non_empty_string(value, path)
 
 
 def _choice(value: Any, path: str, choices: set[str]) -> str:

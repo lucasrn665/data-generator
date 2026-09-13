@@ -87,6 +87,16 @@ class TransfersConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class QualityConfig:
+    """Seleção de um cenário controlado de qualidade."""
+
+    scenario: str
+    rate: Decimal
+    entity: str
+    field: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class BankingDataGeneratorConfig:
     """Configuração validada do gerador de dados bancários."""
 
@@ -100,3 +110,4 @@ class BankingDataGeneratorConfig:
     cards: CardsConfig
     transactions: TransactionsConfig
     transfers: TransfersConfig
+    quality: QualityConfig

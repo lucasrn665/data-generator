@@ -43,7 +43,7 @@ def build_batch_csv_paths(
         / f"schema_version={BATCH_SCHEMA_VERSION}"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
-        / "scenario=valid"
+        / f"scenario={config.quality.scenario}"
     )
     return BatchCsvPaths(
         directory=directory,

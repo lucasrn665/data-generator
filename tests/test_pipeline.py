@@ -1,7 +1,9 @@
 import csv
 import json
+import shutil
 from dataclasses import replace
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -46,7 +48,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.6.0"
+        / "schema_version=1.6.1"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -88,8 +90,10 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.approved_fraud_count + result.declined_fraud_count == 15
     assert result.transfer_attempt_count == 20
     assert result.completed_transfer_count + result.declined_transfer_count == 20
-    assert result.generator_version == "0.7.0"
-    assert result.schema_version == "1.6.0"
+    assert result.generator_version == "0.8.0"
+    assert result.schema_version == "1.6.1"
+    assert result.scenario == "valid"
+    assert result.expected_violation_count == 0
     assert result.created is True
     assert {path.name for path in result.output_directory.iterdir()} == {
         "customers.csv",
@@ -197,6 +201,135 @@ def test_repeated_pipeline_produces_identical_files(
         )
     }
     assert second.created is False
+
+
+@pytest.mark.parametrize(
+    ("scenario", "entity", "field", "target_file"),
+    [
+        ("duplicate_exact", "customers", None, "customers.csv"),
+        ("duplicate_conflicting", "customers", "synthetic_name", "customers.csv"),
+        ("required_null", "customers", "synthetic_name", "customers.csv"),
+        ("orphan_foreign_key", "addresses", "customer_id", "addresses.csv"),
+    ],
+)
+def test_quality_scenarios_coexist_and_only_change_target_file(
+    tmp_path: Path,
+    pipeline_config: BankingDataGeneratorConfig,
+    scenario: str,
+    entity: str,
+    field: str | None,
+    target_file: str,
+) -> None:
+    valid = run_batch_pipeline(pipeline_config, tmp_path)
+    scenario_config = replace(
+        pipeline_config,
+        quality=replace(
+            pipeline_config.quality,
+            scenario=scenario,
+            rate=Decimal("0.50"),
+            entity=entity,
+            field=field,
+        ),
+    )
+    result = run_batch_pipeline(scenario_config, tmp_path)
+    assert result.output_directory.name == f"scenario={scenario}"
+    assert result.quality_affected_count > 0
+    assert result.expected_violation_count == result.quality_affected_count
+    manifest = json.loads(result.manifest_file.read_text(encoding="utf-8"))
+    quality = manifest["quality_summary"]
+    assert manifest["scenario"] == scenario
+    assert manifest["quality_scenarios"] == [scenario]
+    assert quality["quality_scenario_version"] == "1.0.0"
+    assert quality["target_entity"] == entity
+    assert quality["target_field"] == field
+    assert quality["affected_count"] == result.quality_affected_count
+    assert quality["canonical_validation_passed"] is True
+    assert quality["calculated_count"] == quality["affected_count"]
+    assert quality["expected_violation_count"] == quality["affected_count"]
+    assert quality["expected_violation_type"] != "none"
+    if scenario.startswith("duplicate"):
+        assert quality["published_record_count"] == (
+            quality["original_record_count"] + quality["additional_row_count"]
+        )
+        assert quality["duplicate_key_count"] == quality["affected_count"]
+    else:
+        assert quality["published_record_count"] == quality["original_record_count"]
+    for valid_file in valid.output_directory.glob("*.csv"):
+        scenario_file = result.output_directory / valid_file.name
+        if valid_file.name == target_file:
+            assert scenario_file.read_bytes() != valid_file.read_bytes()
+        else:
+            assert scenario_file.read_bytes() == valid_file.read_bytes()
+    assert run_batch_pipeline(scenario_config, tmp_path).created is False
+
+
+def test_schema_160_coexists_unchanged_with_161_and_canonical_csvs_match(
+    tmp_path: Path,
+    pipeline_config: BankingDataGeneratorConfig,
+) -> None:
+    current = run_batch_pipeline(pipeline_config, tmp_path)
+    schema_160_hashes = {
+        "accounts.csv": (
+            "dcb80d4eb98740fc7de44e09101f94441d2e958c1c07d61339466df83ee43fc7"
+        ),
+        "addresses.csv": (
+            "b29817a256ed2b8519e992790c0ec5bc62f77a14fb278acd6662b076a8cd0892"
+        ),
+        "cards.csv": (
+            "5a3954c437610c6c6cdd044d40f70f8d11d5254a9632ce14cb1dea0312728fc9"
+        ),
+        "customers.csv": (
+            "4c4c281755b1f491b0e782290dfa1d9b9476a505c94291150ec895e6fcfbc1da"
+        ),
+        "ledger_entries.csv": (
+            "6b132f7b4833dbc06dbe2db5d3524c7fb3b0d4926ad336e31ae1c35b4962f4c4"
+        ),
+        "merchants.csv": (
+            "a25bb3dce11dbfa673527e888a7ee90d072c721871bd49ef64b8acdb223d502a"
+        ),
+        "transaction_labels.csv": (
+            "344f41789de28b716be717d080e9943a81ad2916e073979c347a9aa2dd660366"
+        ),
+        "transactions.csv": (
+            "a3c09d541ab58ff0f3b3e0b42c7f70c55cdc39d70c32eb39dc9ca40778ce22c7"
+        ),
+        "transfers.csv": (
+            "e23ff97977864aa690bd518fb90559af3d2e0f18d665af0c9716c8d9abd1ddf2"
+        ),
+    }
+    assert {
+        path.name: sha256(path.read_bytes()).hexdigest()
+        for path in current.output_directory.glob("*.csv")
+    } == schema_160_hashes
+    old = (
+        tmp_path
+        / "output"
+        / "schema_version=1.6.0"
+        / "reference_date=2026-01-01"
+        / "seed=42"
+        / "scenario=valid"
+    )
+    old.mkdir(parents=True)
+    for current_file in current.output_directory.glob("*.csv"):
+        shutil.copyfile(current_file, old / current_file.name)
+    current_manifest = json.loads(current.manifest_file.read_text(encoding="utf-8"))
+    old_manifest = dict(current_manifest)
+    old_manifest["generator_version"] = "0.7.0"
+    old_manifest["schema_version"] = "1.6.0"
+    old_manifest.pop("quality_summary")
+    (old / "manifest.json").write_text(
+        json.dumps(old_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    old_snapshot = {path.name: path.read_bytes() for path in old.iterdir()}
+
+    repeated = run_batch_pipeline(pipeline_config, tmp_path)
+
+    assert repeated.created is False
+    assert old_snapshot == {path.name: path.read_bytes() for path in old.iterdir()}
+    assert current.manifest_file.read_bytes() != (old / "manifest.json").read_bytes()
+    for current_file in current.output_directory.glob("*.csv"):
+        assert current_file.read_bytes() == (old / current_file.name).read_bytes()
 
 
 def test_validation_failure_happens_before_any_write(

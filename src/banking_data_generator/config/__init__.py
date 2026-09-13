@@ -10,6 +10,7 @@ from banking_data_generator.config.models import (
     InitialBalanceConfig,
     MerchantsConfig,
     OutputConfig,
+    QualityConfig,
     TransactionsConfig,
     TransfersConfig,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "InitialBalanceConfig",
     "MerchantsConfig",
     "OutputConfig",
+    "QualityConfig",
     "TransactionsConfig",
     "TransfersConfig",
     "load_config",

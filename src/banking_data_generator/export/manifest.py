@@ -39,6 +39,7 @@ def build_manifest(
     transaction_summary: Mapping[str, Any],
     transfer_summary: Mapping[str, Any],
     fraud_label_summary: Mapping[str, Any],
+    quality_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Construa o manifesto a partir dos CSVs já escritos e validados."""
     files = {
@@ -54,7 +55,7 @@ def build_manifest(
         "accounting_invariants": dict(accounting_invariants),
         "currency": config.currency,
         "domain_summary": dict(domain_summary),
-        "expected_violation_count": 0,
+        "expected_violation_count": quality_summary["expected_violation_count"],
         "files": files,
         "generator_version": GENERATOR_VERSION,
         "parameters": {
@@ -95,14 +96,17 @@ def build_manifest(
             },
             "output_format": config.output.format,
         },
-        "quality_scenarios": [],
+        "quality_scenarios": (
+            [] if config.quality.scenario == "valid" else [config.quality.scenario]
+        ),
         "reference_date": config.reference_date.isoformat(),
-        "scenario": "valid",
+        "scenario": config.quality.scenario,
         "schema_version": BATCH_SCHEMA_VERSION,
         "seed": config.seed,
         "transaction_summary": dict(transaction_summary),
         "transfer_summary": dict(transfer_summary),
         "fraud_label_summary": dict(fraud_label_summary),
+        "quality_summary": dict(quality_summary),
     }
 
 
