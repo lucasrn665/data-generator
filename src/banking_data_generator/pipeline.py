@@ -30,11 +30,15 @@ class BatchPipelineResult:
     customers_file: Path
     addresses_file: Path
     accounts_file: Path
+    manifest_file: Path
     customer_count: int
     address_count: int
     account_count: int
     seed: int
     reference_date: date
+    generator_version: str
+    schema_version: str
+    created: bool
 
 
 def run_batch_pipeline(
@@ -47,7 +51,7 @@ def run_batch_pipeline(
     accounts = generate_accounts(customers, config)
 
     validate_dataset(config, customers, addresses, accounts)
-    paths = write_batch_csv(
+    publication = write_batch_csv(
         config,
         customers,
         addresses,
@@ -55,15 +59,19 @@ def run_batch_pipeline(
         project_root=project_root,
     )
     return BatchPipelineResult(
-        output_directory=paths.directory,
-        customers_file=paths.customers,
-        addresses_file=paths.addresses,
-        accounts_file=paths.accounts,
+        output_directory=publication.paths.directory,
+        customers_file=publication.paths.customers,
+        addresses_file=publication.paths.addresses,
+        accounts_file=publication.paths.accounts,
+        manifest_file=publication.paths.manifest,
         customer_count=len(customers),
         address_count=len(addresses),
         account_count=len(accounts),
         seed=config.seed,
         reference_date=config.reference_date,
+        generator_version=publication.generator_version,
+        schema_version=publication.schema_version,
+        created=publication.created,
     )
 
 

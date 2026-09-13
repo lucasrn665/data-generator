@@ -60,7 +60,10 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "data de referência: 2026-01-01" in captured.out
     assert "clientes: 4" in captured.out
     assert "endereços: 4" in captured.out
-    assert "customers.csv, addresses.csv, accounts.csv" in captured.out
+    assert "versão do gerador: 0.1.0" in captured.out
+    assert "versão do schema: 1.0.0" in captured.out
+    assert "publicação: criada" in captured.out
+    assert "customers.csv, addresses.csv, accounts.csv, manifest.json" in captured.out
     assert "SYN-CUS-" not in captured.out
 
     directory = (
@@ -71,6 +74,10 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
         "addresses.csv",
         "accounts.csv",
     }
+    assert (directory / "manifest.json").is_file()
+
+    assert cli_module.main(["--config", "configs/test.yaml"]) == 0
+    assert "publicação: idempotente já existente" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(

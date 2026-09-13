@@ -8,7 +8,7 @@ from pathlib import Path
 import pyarrow as pa
 
 from banking_data_generator.config import ConfigError, load_config
-from banking_data_generator.export import UnsafeOutputPath
+from banking_data_generator.export import ManifestValidationError, UnsafeOutputPath
 from banking_data_generator.pipeline import (
     BatchPipelineResult,
     DatasetValidationError,
@@ -61,6 +61,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         CliInputError,
         ConfigError,
         DatasetValidationError,
+        ManifestValidationError,
         UnsafeOutputPath,
         OSError,
         pa.ArrowException,
@@ -80,10 +81,15 @@ def print_success_summary(result: BatchPipelineResult) -> None:
     print(f"clientes: {result.customer_count}")
     print(f"endereços: {result.address_count}")
     print(f"contas: {result.account_count}")
+    print(f"versão do gerador: {result.generator_version}")
+    print(f"versão do schema: {result.schema_version}")
+    publication = "criada" if result.created else "idempotente já existente"
+    print(f"publicação: {publication}")
     print(f"diretório de saída: {result.output_directory}")
     print(
         "arquivos: "
         f"{result.customers_file.name}, "
         f"{result.addresses_file.name}, "
-        f"{result.accounts_file.name}"
+        f"{result.accounts_file.name}, "
+        f"{result.manifest_file.name}"
     )

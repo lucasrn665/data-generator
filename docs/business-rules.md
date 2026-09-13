@@ -31,6 +31,11 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   `.gitignore`.
 - A exportação rejeita caminhos absolutos, escapes da raiz do projeto e
   diretórios de saída localizados dentro de `src/` ou `.git/`.
+- Uma execução válida é publicada atomicamente como um diretório contendo três
+  CSVs e `manifest.json`. O manifesto registra versões, parâmetros, contagens,
+  tamanhos e checksums SHA-256 sem dados pessoais ou valores variáveis no tempo.
+- Reexecuções idênticas validam e reutilizam a publicação existente. Conjuntos
+  ausentes, inválidos ou divergentes não são sobrescritos.
 - Configurações e dados gerados não contêm credenciais.
 
 ## Semântica das taxas de transação

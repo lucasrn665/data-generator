@@ -29,8 +29,8 @@ arquivos CSV; streaming pertence ao roadmap futuro.
   a partir da raiz do projeto.
 - Dados gerados devem ficar fora de `src/` e do versionamento Git, mas podem
   ficar dentro do repositório. `data/output/` já está no `.gitignore`.
-- A rejeição de caminhos de saída dentro de `src/` será implementada em uma
-  etapa futura de validação de segurança de caminhos.
+- A exportação rejeita caminhos absolutos, escapes da raiz e destinos dentro de
+  `src/` ou `.git/`.
 
 Consulte o [modelo de domínio](domain-model.md), as
 [regras de negócio](business-rules.md) e os
@@ -54,14 +54,19 @@ Consulte o [modelo de domínio](domain-model.md), as
 - IDs sintéticos prefixados, um endereço principal por cliente e cardinalidade
   configurada de contas com chaves estrangeiras válidas.
 - Conversão explícita de clientes, endereços e contas para tabelas PyArrow.
-- Escrita batch determinística de `customers.csv`, `addresses.csv` e
-  `accounts.csv`, com substituição atômica individual e limpeza do temporário
-  próprio em caso de falha.
+- Serialização batch determinística de `customers.csv`, `addresses.csv` e
+  `accounts.csv`.
 - Resolução do diretório de saída pela raiz do projeto e rejeição de caminhos
   absolutos, travessias, escapes e destinos dentro de `src/` ou `.git/`.
 - Pipeline batch para carregar, gerar, validar e exportar o conjunto atual.
 - CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
   erros esperados.
+- Manifesto JSON determinístico com versões, parâmetros, contagens, tamanhos e
+  checksums SHA-256 dos três CSVs.
+- Publicação conjunta por diretório de staging irmão, com manifesto escrito por
+  último e exposição do caminho final somente após sucesso integral.
+- Reexecução idempotente mediante validação exata do manifesto e dos arquivos;
+  publicações divergentes nunca são sobrescritas.
 
 ## Testes e validações disponíveis
 
@@ -76,7 +81,9 @@ Consulte o [modelo de domínio](domain-model.md), as
   decimais, idempotência, atomicidade e segurança de caminhos.
 - Pipeline completo, validação antes da escrita, determinismo, resumo da CLI,
   códigos de saída, erros conhecidos e preservação do diretório atual.
-- pytest: 69 testes passando na execução atual com Python 3.14.4.
+- Manifesto, checksums, tamanhos, contagens, serialização determinística,
+  publicação por staging, falhas por fase, limpeza segura e conflitos.
+- pytest: 81 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.

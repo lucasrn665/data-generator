@@ -53,7 +53,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
         addresses,
         accounts,
         project_root=root,
-    )
+    ).paths
 
     expected_directory = (
         root / "exports" / "reference_date=2026-01-01" / "seed=42" / "valid"
@@ -94,7 +94,7 @@ def test_csv_preserves_dates_money_and_escaped_text(batch_data: tuple) -> None:
         addresses,
         accounts,
         project_root=root,
-    )
+    ).paths
     customer_rows = _read_dicts(paths.customers)
     address_rows = _read_dicts(paths.addresses)
     account_rows = _read_dicts(paths.accounts)
@@ -116,7 +116,7 @@ def test_repeated_export_produces_identical_bytes(batch_data: tuple) -> None:
         addresses,
         accounts,
         project_root=root,
-    )
+    ).paths
     first_bytes = {
         path.name: path.read_bytes()
         for path in (first_paths.customers, first_paths.addresses, first_paths.accounts)
@@ -128,7 +128,7 @@ def test_repeated_export_produces_identical_bytes(batch_data: tuple) -> None:
         addresses,
         accounts,
         project_root=root,
-    )
+    ).paths
 
     assert first_bytes == {
         path.name: path.read_bytes()
@@ -150,7 +150,7 @@ def test_csv_files_can_be_read_back_with_valid_foreign_keys(
         addresses,
         accounts,
         project_root=root,
-    )
+    ).paths
 
     customer_table = pa_csv.read_csv(
         paths.customers,

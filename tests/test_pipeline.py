@@ -38,6 +38,10 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.customers_file.is_file()
     assert result.addresses_file.is_file()
     assert result.accounts_file.is_file()
+    assert result.manifest_file.is_file()
+    assert result.generator_version == "0.1.0"
+    assert result.schema_version == "1.0.0"
+    assert result.created is True
 
 
 def test_repeated_pipeline_produces_identical_files(
@@ -60,6 +64,7 @@ def test_repeated_pipeline_produces_identical_files(
             second.accounts_file,
         )
     }
+    assert second.created is False
 
 
 def test_validation_failure_happens_before_any_write(

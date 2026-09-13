@@ -2,8 +2,8 @@
 
 Gerador de dados bancários inteiramente sintéticos para exercícios de engenharia
 de dados no Databricks. O projeto gera clientes, endereços e contas e permite
-exportá-los em arquivos CSV batch; movimentações bancárias ainda não estão
-implementadas.
+exportá-los como um conjunto batch com três CSVs e manifesto de integridade;
+movimentações bancárias ainda não estão implementadas.
 
 ## Requisitos
 
@@ -45,8 +45,9 @@ python -m banking_data_generator --config configs/default.yaml
 
 Use `--project-root` quando a raiz desejada não for o diretório atual. A CLI
 carrega a configuração, gera e valida os dados e escreve `customers.csv`,
-`addresses.csv` e `accounts.csv` no diretório particionado por data de
-referência, seed e cenário `valid`.
+`addresses.csv`, `accounts.csv` e `manifest.json` no diretório particionado por
+data de referência, seed e cenário `valid`. O conjunto é publicado de uma só
+vez; uma reexecução idêntica valida os arquivos existentes sem sobrescrevê-los.
 
 ## Configuração
 
@@ -63,6 +64,6 @@ referência e seed. Toda geração recebe uma seed.
 
 ## Estado atual
 
-Clientes, endereços, contas, schemas PyArrow, escrita batch CSV, pipeline e CLI
-estão implementados. Cartões, estabelecimentos, movimentações, ledger e saldo
-atual permanecem fora do escopo atual.
+Clientes, endereços, contas, schemas PyArrow, publicação batch atômica com
+manifesto, pipeline e CLI estão implementados. Cartões, estabelecimentos,
+movimentações, ledger e saldo atual permanecem fora do escopo atual.

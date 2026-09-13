@@ -20,6 +20,10 @@ posteriores.
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.
 - ausência de arquivos gerados dentro de `src/` ou `.git/`.
+- presença dos três CSVs e do manifesto em toda execução publicada;
+- correspondência entre manifesto, contagens, tamanhos e checksums SHA-256;
+- rejeição de reexecuções incompatíveis ou de publicações preexistentes
+  incompletas.
 
 ## Cenários controlados futuros
 

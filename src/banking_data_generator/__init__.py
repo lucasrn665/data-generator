@@ -1,6 +1,8 @@
-"""Estrutura inicial do gerador de dados bancários sintéticos."""
+"""Gerador de dados bancários sintéticos."""
 
-__version__ = "0.1.0"
+from banking_data_generator.version import GENERATOR_VERSION
+
+__version__ = GENERATOR_VERSION
 
 
 def installation_status() -> str:
