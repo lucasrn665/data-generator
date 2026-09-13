@@ -16,6 +16,7 @@ CSV_ENTITY_FILES = {
     "accounts": "accounts.csv",
     "addresses": "addresses.csv",
     "customers": "customers.csv",
+    "ledger_entries": "ledger_entries.csv",
 }
 MANAGED_FILENAMES = frozenset({*CSV_ENTITY_FILES.values(), "manifest.json"})
 
@@ -28,10 +29,12 @@ def build_manifest(
     config: BankingDataGeneratorConfig,
     directory: Path,
     record_counts: Mapping[str, int],
+    accounting_invariants: Mapping[str, int | str],
 ) -> dict[str, Any]:
     """Construa o manifesto a partir dos CSVs já escritos e validados."""
     files = {
         filename: {
+            "path": filename,
             "record_count": record_counts[entity],
             "sha256": _sha256(directory / filename),
             "size_bytes": (directory / filename).stat().st_size,
@@ -39,6 +42,7 @@ def build_manifest(
         for entity, filename in CSV_ENTITY_FILES.items()
     }
     return {
+        "accounting_invariants": dict(accounting_invariants),
         "currency": config.currency,
         "expected_violation_count": 0,
         "files": files,
@@ -70,7 +74,7 @@ def serialize_manifest(manifest: Mapping[str, Any]) -> bytes:
 
 
 def validate_csv_files(directory: Path, manifest: Mapping[str, Any]) -> None:
-    """Valide presença, contagem, tamanho e checksum dos três CSVs."""
+    """Valide presença, contagem, tamanho e checksum dos quatro CSVs."""
     files = manifest.get("files")
     if not isinstance(files, dict):
         _fail("a propriedade 'files' é inválida")
@@ -82,6 +86,8 @@ def validate_csv_files(directory: Path, manifest: Mapping[str, Any]) -> None:
         metadata = files.get(filename)
         if not isinstance(metadata, dict):
             _fail(f"os metadados de '{filename}' são inválidos")
+        if metadata.get("path") != filename:
+            _fail(f"o caminho relativo de '{filename}' é inválido")
         if metadata.get("size_bytes") != path.stat().st_size:
             _fail(f"o tamanho de '{filename}' é divergente")
         if metadata.get("sha256") != _sha256(path):
@@ -120,7 +126,7 @@ def validate_existing_publication(
         _fail(f"o destino existente '{directory.name}' não é um diretório")
     actual_names = {path.name for path in directory.iterdir()}
     if actual_names != MANAGED_FILENAMES:
-        _fail("o diretório final não contém exatamente os quatro arquivos esperados")
+        _fail("o diretório final não contém exatamente os cinco arquivos esperados")
 
     manifest_path = directory / "manifest.json"
     existing_manifest = load_manifest(manifest_path)

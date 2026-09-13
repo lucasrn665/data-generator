@@ -64,11 +64,23 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
     assert manifest["scenario"] == "valid"
     assert manifest["quality_scenarios"] == []
     assert manifest["expected_violation_count"] == 0
+    invariants = manifest["accounting_invariants"]
+    assert invariants["account_count"] == len(accounts)
+    assert invariants["entry_count"] == len(accounts)
+    assert invariants["opening_entry_count"] == len(accounts)
+    assert invariants["reconciled_account_count"] == len(accounts)
+    assert invariants["reconciliation_failure_count"] == 0
+    assert invariants["debit_total_brl"] == "0.00"
+    assert (
+        invariants["opening_credit_total_brl"]
+        == f"{sum(account.opening_balance for account in accounts):.2f}"
+    )
     assert manifest["parameters"]["customers"]["count"] == len(customers)
     assert set(manifest["files"]) == {
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "ledger_entries.csv",
     }
     assert "generated_at" not in manifest
     assert "timestamp" not in manifest
@@ -80,6 +92,7 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
         "customers.csv": len(customers),
         "addresses.csv": len(addresses),
         "accounts.csv": len(accounts),
+        "ledger_entries.csv": len(accounts),
     }
     for filename, expected_count in expected_counts.items():
         path = publication.paths.directory / filename
@@ -87,6 +100,7 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
         assert metadata["record_count"] == expected_count
         assert metadata["size_bytes"] == path.stat().st_size
         assert metadata["sha256"] == sha256(path.read_bytes()).hexdigest()
+        assert metadata["path"] == filename
         assert Path(filename).name == filename
         assert not Path(filename).is_absolute()
 
@@ -123,9 +137,10 @@ def test_failure_in_each_phase_never_exposes_final_directory(
     final = (
         root
         / "exports"
+        / "schema_version=1.1.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
-        / "valid"
+        / "scenario=valid"
     )
 
     def fail(*args: object, **kwargs: object) -> None:
@@ -162,6 +177,76 @@ def test_rejects_divergent_existing_csv(publication_data: tuple) -> None:
     assert publication.paths.accounts.read_bytes() == b"divergent"
 
 
+def test_rejects_divergent_or_missing_ledger(publication_data: tuple) -> None:
+    publication = _publish(publication_data)
+    publication.paths.ledger_entries.write_bytes(b"divergent")
+
+    with pytest.raises(ManifestValidationError, match="divergente"):
+        _publish(publication_data)
+
+    assert publication.paths.ledger_entries.read_bytes() == b"divergent"
+
+
+def test_rejects_missing_existing_ledger(publication_data: tuple) -> None:
+    publication = _publish(publication_data)
+    publication.paths.ledger_entries.unlink()
+
+    with pytest.raises(ManifestValidationError, match="cinco arquivos esperados"):
+        _publish(publication_data)
+
+    assert not publication.paths.ledger_entries.exists()
+
+
+def test_old_layout_coexists_with_new_publication(publication_data: tuple) -> None:
+    config, _, _, _, root = publication_data
+    old = (
+        root
+        / "exports"
+        / f"reference_date={config.reference_date.isoformat()}"
+        / f"seed={config.seed}"
+        / "valid"
+    )
+    old.mkdir(parents=True)
+    marker = old / "manifest.json"
+    marker.write_text("old publication", encoding="utf-8")
+
+    publication = _publish(publication_data)
+
+    assert publication.created is True
+    assert marker.read_text(encoding="utf-8") == "old publication"
+    assert "schema_version=1.1.0" in publication.paths.directory.parts
+
+
+def test_ledger_write_failure_does_not_publish_final_directory(
+    publication_data: tuple,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config, _, _, _, root = publication_data
+    original = writer_module.pa_csv.write_csv
+
+    def fail_ledger(table: object, where: str, **kwargs: object) -> None:
+        if Path(where).name == "ledger_entries.csv":
+            Path(where).write_bytes(b"partial")
+            raise OSError("ledger write failed")
+        original(table, where, **kwargs)
+
+    monkeypatch.setattr(writer_module.pa_csv, "write_csv", fail_ledger)
+
+    with pytest.raises(OSError, match="ledger write failed"):
+        _publish(publication_data)
+
+    final = (
+        root
+        / "exports"
+        / "schema_version=1.1.0"
+        / f"reference_date={config.reference_date.isoformat()}"
+        / f"seed={config.seed}"
+        / "scenario=valid"
+    )
+    assert not final.exists()
+    assert list(final.parent.glob(".valid.tmp-*")) == []
+
+
 def test_rejects_invalid_existing_manifest(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.manifest.write_text("{invalid", encoding="utf-8")
@@ -174,7 +259,7 @@ def test_rejects_missing_existing_file(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.addresses.unlink()
 
-    with pytest.raises(ManifestValidationError, match="quatro arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="cinco arquivos esperados"):
         _publish(publication_data)
 
 
@@ -205,13 +290,14 @@ def test_rejects_preexisting_directory_without_manifest(
     final = (
         root
         / "exports"
+        / "schema_version=1.1.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
-        / "valid"
+        / "scenario=valid"
     )
     final.mkdir(parents=True)
 
-    with pytest.raises(ManifestValidationError, match="quatro arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="cinco arquivos esperados"):
         _publish(publication_data)
 
     assert final.is_dir()

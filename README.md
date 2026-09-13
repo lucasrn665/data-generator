@@ -2,8 +2,8 @@
 
 Gerador de dados bancários inteiramente sintéticos para exercícios de engenharia
 de dados no Databricks. O projeto gera clientes, endereços e contas e permite
-exportá-los como um conjunto batch com três CSVs e manifesto de integridade;
-movimentações bancárias ainda não estão implementadas.
+exportá-los como um conjunto batch com quatro CSVs e manifesto de integridade.
+O ledger contém somente os lançamentos de abertura nesta etapa.
 
 ## Requisitos
 
@@ -46,8 +46,10 @@ python -m banking_data_generator --config configs/default.yaml
 Use `--project-root` quando a raiz desejada não for o diretório atual. A CLI
 carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 `addresses.csv`, `accounts.csv` e `manifest.json` no diretório particionado por
-data de referência, seed e cenário `valid`. O conjunto é publicado de uma só
-vez; uma reexecução idêntica valida os arquivos existentes sem sobrescrevê-los.
+versão do schema, data de referência, seed e cenário `valid`. O conjunto inclui
+também `ledger_entries.csv` e é publicado de uma só vez; uma reexecução idêntica
+valida os arquivos existentes sem sobrescrevê-los. O layout é
+`data/output/schema_version=1.1.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 ## Configuração
 
@@ -66,6 +68,5 @@ referência e seed. Toda geração recebe uma seed.
 
 Clientes, endereços, contas, schemas PyArrow, publicação batch atômica com
 manifesto, pipeline e CLI estão implementados. Cartões, estabelecimentos,
-movimentações e transferências permanecem fora do escopo atual. Um subledger em
-memória gera os créditos de abertura e reconcilia os saldos antes da publicação;
-seus lançamentos ainda não são exportados.
+movimentações e transferências permanecem fora do escopo atual. O subledger
+publica os créditos de abertura somente após validar e reconciliar os saldos.

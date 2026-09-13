@@ -34,19 +34,28 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.address_count == 10
     assert 10 <= result.account_count <= 30
     assert result.output_directory == (
-        tmp_path / "output" / "reference_date=2026-01-01" / "seed=42" / "valid"
+        tmp_path
+        / "output"
+        / "schema_version=1.1.0"
+        / "reference_date=2026-01-01"
+        / "seed=42"
+        / "scenario=valid"
     )
     assert result.customers_file.is_file()
     assert result.addresses_file.is_file()
     assert result.accounts_file.is_file()
+    assert result.ledger_entries_file.is_file()
     assert result.manifest_file.is_file()
-    assert result.generator_version == "0.1.0"
-    assert result.schema_version == "1.0.0"
+    assert result.ledger_entry_count == result.account_count
+    assert result.opening_credit_total > Decimal("0.00")
+    assert result.generator_version == "0.2.0"
+    assert result.schema_version == "1.1.0"
     assert result.created is True
     assert {path.name for path in result.output_directory.iterdir()} == {
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "ledger_entries.csv",
         "manifest.json",
     }
 

@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any
@@ -9,8 +10,15 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.csv as pa_csv
 
+from banking_data_generator.accounting import (
+    calculate_all_account_balances,
+    generate_opening_entries,
+    reconcile_opening_balances,
+    validate_ledger,
+)
 from banking_data_generator.config import BankingDataGeneratorConfig
-from banking_data_generator.domain.models import Account, Address, Customer
+from banking_data_generator.domain.enums import EntryDirection, LedgerEntryType
+from banking_data_generator.domain.models import Account, Address, Customer, LedgerEntry
 from banking_data_generator.export.manifest import (
     MANAGED_FILENAMES,
     build_manifest,
@@ -27,6 +35,7 @@ from banking_data_generator.export.tables import (
     accounts_to_table,
     addresses_to_table,
     customers_to_table,
+    ledger_entries_to_table,
 )
 from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
 
@@ -49,19 +58,57 @@ def write_batch_csv(
     customers: Sequence[Customer],
     addresses: Sequence[Address],
     accounts: Sequence[Account],
+    ledger_entries: Sequence[LedgerEntry] | None = None,
     *,
     project_root: Path = PROJECT_ROOT,
 ) -> BatchPublicationResult:
     """Publique atomicamente os CSVs e o manifesto como um único diretório."""
+    if ledger_entries is None:
+        ledger_entries = generate_opening_entries(accounts)
+    validate_ledger(accounts, ledger_entries)
+    balances = calculate_all_account_balances(accounts, ledger_entries)
+    reconcile_opening_balances(accounts, balances)
+    opening_entries = [
+        entry
+        for entry in ledger_entries
+        if entry.entry_type is LedgerEntryType.OPENING_BALANCE
+    ]
+    opening_credit_total = sum(
+        (
+            entry.amount
+            for entry in opening_entries
+            if entry.direction is EntryDirection.CREDIT
+        ),
+        start=Decimal("0.00"),
+    )
+    debit_total = sum(
+        (
+            entry.amount
+            for entry in ledger_entries
+            if entry.direction is EntryDirection.DEBIT
+        ),
+        start=Decimal("0.00"),
+    )
+    accounting_invariants: dict[str, int | str] = {
+        "account_count": len(accounts),
+        "entry_count": len(ledger_entries),
+        "opening_entry_count": len(opening_entries),
+        "reconciled_account_count": len(balances),
+        "reconciliation_failure_count": 0,
+        "opening_credit_total_brl": f"{opening_credit_total:.2f}",
+        "debit_total_brl": f"{debit_total:.2f}",
+    }
     tables = {
         "customers.csv": customers_to_table(customers),
         "addresses.csv": addresses_to_table(addresses),
         "accounts.csv": accounts_to_table(accounts),
+        "ledger_entries.csv": ledger_entries_to_table(ledger_entries),
     }
     record_counts = {
         "customers": len(customers),
         "addresses": len(addresses),
         "accounts": len(accounts),
+        "ledger_entries": len(ledger_entries),
     }
     final_paths = build_batch_csv_paths(config, project_root=project_root)
     final_paths.directory.parent.mkdir(parents=True, exist_ok=True)
@@ -72,7 +119,9 @@ def write_batch_csv(
 
     try:
         _write_csv_files(tables, staging_paths)
-        manifest = build_manifest(config, staging_directory, record_counts)
+        manifest = build_manifest(
+            config, staging_directory, record_counts, accounting_invariants
+        )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)
 
@@ -97,6 +146,7 @@ def _write_csv_files(
         "customers.csv": paths.customers,
         "addresses.csv": paths.addresses,
         "accounts.csv": paths.accounts,
+        "ledger_entries.csv": paths.ledger_entries,
     }
     for filename, table in tables.items():
         pa_csv.write_csv(
@@ -145,6 +195,7 @@ def _paths_in_directory(directory: Path) -> BatchCsvPaths:
         customers=directory / "customers.csv",
         addresses=directory / "addresses.csv",
         accounts=directory / "accounts.csv",
+        ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",
     )
 

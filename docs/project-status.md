@@ -54,15 +54,15 @@ Consulte o [modelo de domínio](domain-model.md), as
 - IDs sintéticos prefixados, um endereço principal por cliente e cardinalidade
   configurada de contas com chaves estrangeiras válidas.
 - Conversão explícita de clientes, endereços e contas para tabelas PyArrow.
-- Serialização batch determinística de `customers.csv`, `addresses.csv` e
-  `accounts.csv`.
+- Serialização batch determinística de `customers.csv`, `addresses.csv`,
+  `accounts.csv` e `ledger_entries.csv`.
 - Resolução do diretório de saída pela raiz do projeto e rejeição de caminhos
   absolutos, travessias, escapes e destinos dentro de `src/` ou `.git/`.
 - Pipeline batch para carregar, gerar, validar e exportar o conjunto atual.
 - CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
   erros esperados.
 - Manifesto JSON determinístico com versões, parâmetros, contagens, tamanhos e
-  checksums SHA-256 dos três CSVs.
+  checksums SHA-256 dos quatro CSVs, além de invariantes contábeis agregadas.
 - Publicação conjunta por diretório de staging irmão, com manifesto escrito por
   último e exposição do caminho final somente após sucesso integral.
 - Reexecução idempotente mediante validação exata do manifesto e dos arquivos;
@@ -71,6 +71,10 @@ Consulte o [modelo de domínio](domain-model.md), as
   conta, valores `Decimal`, referências sintéticas e timestamps UTC.
 - Cálculo puro de saldos como créditos menos débitos e reconciliação com os
   saldos de abertura antes da publicação batch.
+- Contrato batch `1.1.0`, gerador `0.2.0` e caminho particionado também pela
+  versão do schema, preservando a coexistência com publicações anteriores.
+- Exportação determinística do ledger validado e reconciliado, com valores
+  monetários decimais e timestamps UTC inequívocos.
 
 ## Testes e validações disponíveis
 
@@ -89,7 +93,7 @@ Consulte o [modelo de domínio](domain-model.md), as
   publicação por staging, falhas por fase, limpeza segura e conflitos.
 - Geração, ordenação e validação do ledger, cálculo de créditos e débitos,
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
-- pytest: 96 testes passando na execução atual com Python 3.14.4.
+- pytest: 101 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
@@ -98,17 +102,17 @@ Consulte o [modelo de domínio](domain-model.md), as
 
 - Cartões, estabelecimentos, transações e transferências ainda não foram
   implementados.
-- O ledger e os saldos são validados somente em memória e ainda não fazem parte
-  do conjunto publicado nem do manifesto.
+- O ledger publicado contém somente lançamentos de abertura; saldos continuam
+  derivados em memória e não são publicados como entidade independente.
 - Ainda não existem schemas PyArrow para entidades futuras.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Exportar o ledger e evoluir o contrato batch em uma etapa separada, ou definir
-cartões como próximo incremento. Compras, transferências e demais eventos
-financeiros permanecem fora da etapa concluída.
+Definir cartões ou os primeiros eventos financeiros como próximo incremento.
+Compras, transferências e demais tipos de lançamento permanecem fora da etapa
+concluída.
 
 ## Comandos principais
 

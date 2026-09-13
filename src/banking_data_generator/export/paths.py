@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from banking_data_generator.config import BankingDataGeneratorConfig
+from banking_data_generator.version import BATCH_SCHEMA_VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -20,6 +21,7 @@ class BatchCsvPaths:
     customers: Path
     addresses: Path
     accounts: Path
+    ledger_entries: Path
     manifest: Path
 
 
@@ -33,15 +35,17 @@ def build_batch_csv_paths(
     base = _resolve_safe_base(config.output.directory, root)
     directory = (
         base
+        / f"schema_version={BATCH_SCHEMA_VERSION}"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
-        / "valid"
+        / "scenario=valid"
     )
     return BatchCsvPaths(
         directory=directory,
         customers=directory / "customers.csv",
         addresses=directory / "addresses.csv",
         accounts=directory / "accounts.csv",
+        ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",
     )
 

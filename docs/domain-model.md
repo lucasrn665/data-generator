@@ -35,7 +35,8 @@ Cada cliente terá entre `accounts.min_per_customer` e
 pertencerá a exatamente um cliente. Uma conta poderá possuir cartões,
 transações, transferências e saldos. Estornos deverão referenciar uma transação
 anterior. Clientes, endereços e contas possuem schemas PyArrow explícitos; os
-lançamentos também possuem schema em memória, mas ainda não são publicados. Os
+lançamentos também possuem schema explícito e são publicados em
+`ledger_entries.csv`. Os
 schemas das demais entidades serão definidos antes de suas implementações.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por

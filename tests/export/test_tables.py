@@ -4,16 +4,19 @@ from pathlib import Path
 
 import pytest
 
+from banking_data_generator.accounting import generate_opening_entries
 from banking_data_generator.config import BankingDataGeneratorConfig, load_config
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
     ADDRESS_SCHEMA,
     CUSTOMER_SCHEMA,
+    LEDGER_ENTRY_SCHEMA,
 )
 from banking_data_generator.export.tables import (
     accounts_to_table,
     addresses_to_table,
     customers_to_table,
+    ledger_entries_to_table,
 )
 from banking_data_generator.generation import (
     generate_accounts,
@@ -68,3 +71,19 @@ def test_accounts_preserve_decimal_without_float(generated_domain: tuple) -> Non
     assert table.column_names == ACCOUNT_SCHEMA.names
     assert all(isinstance(balance, Decimal) for balance in balances)
     assert balances == [account.opening_balance for account in accounts]
+
+
+def test_ledger_entries_preserve_schema_decimal_utc_and_order(
+    generated_domain: tuple,
+) -> None:
+    _, _, _, accounts = generated_domain
+    entries = generate_opening_entries(accounts)
+
+    table = ledger_entries_to_table(entries)
+
+    assert table.schema == LEDGER_ENTRY_SCHEMA
+    assert table.column_names == LEDGER_ENTRY_SCHEMA.names
+    assert table.num_rows == len(accounts)
+    assert table["entry_id"].to_pylist() == [entry.entry_id for entry in entries]
+    assert all(isinstance(value, Decimal) for value in table["amount"].to_pylist())
+    assert all(value.tzinfo is not None for value in table["effective_at"].to_pylist())

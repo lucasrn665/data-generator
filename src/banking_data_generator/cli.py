@@ -26,7 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m banking_data_generator",
         description=(
-            "Gera clientes, endereços e contas sintéticos e grava três arquivos CSV."
+            "Gera clientes, endereços, contas e ledger sintéticos em quatro CSVs."
         ),
     )
     parser.add_argument(
@@ -83,6 +83,8 @@ def print_success_summary(result: BatchPipelineResult) -> None:
     print(f"clientes: {result.customer_count}")
     print(f"endereços: {result.address_count}")
     print(f"contas: {result.account_count}")
+    print(f"lançamentos: {result.ledger_entry_count}")
+    print(f"créditos de abertura: {result.opening_credit_total:.2f} BRL")
     print(f"versão do gerador: {result.generator_version}")
     print(f"versão do schema: {result.schema_version}")
     publication = "criada" if result.created else "idempotente já existente"
@@ -93,5 +95,6 @@ def print_success_summary(result: BatchPipelineResult) -> None:
         f"{result.customers_file.name}, "
         f"{result.addresses_file.name}, "
         f"{result.accounts_file.name}, "
+        f"{result.ledger_entries_file.name}, "
         f"{result.manifest_file.name}"
     )

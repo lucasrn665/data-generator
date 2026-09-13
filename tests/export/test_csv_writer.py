@@ -11,6 +11,7 @@ from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
     ADDRESS_SCHEMA,
     CUSTOMER_SCHEMA,
+    LEDGER_ENTRY_SCHEMA,
 )
 from banking_data_generator.export import UnsafeOutputPath, write_batch_csv
 from banking_data_generator.export.paths import build_batch_csv_paths
@@ -56,20 +57,33 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
     ).paths
 
     expected_directory = (
-        root / "exports" / "reference_date=2026-01-01" / "seed=42" / "valid"
+        root
+        / "exports"
+        / "schema_version=1.1.0"
+        / "reference_date=2026-01-01"
+        / "seed=42"
+        / "scenario=valid"
     )
     assert paths.directory == expected_directory
     assert {
-        path.name for path in (paths.customers, paths.addresses, paths.accounts)
+        path.name
+        for path in (
+            paths.customers,
+            paths.addresses,
+            paths.accounts,
+            paths.ledger_entries,
+        )
     } == {
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "ledger_entries.csv",
     }
     for path, schema, records in (
         (paths.customers, CUSTOMER_SCHEMA, customers),
         (paths.addresses, ADDRESS_SCHEMA, addresses),
         (paths.accounts, ACCOUNT_SCHEMA, accounts),
+        (paths.ledger_entries, LEDGER_ENTRY_SCHEMA, accounts),
     ):
         assert b"\r\n" not in path.read_bytes()
         with path.open(encoding="utf-8", newline="") as csv_file:
@@ -98,6 +112,7 @@ def test_csv_preserves_dates_money_and_escaped_text(batch_data: tuple) -> None:
     customer_rows = _read_dicts(paths.customers)
     address_rows = _read_dicts(paths.addresses)
     account_rows = _read_dicts(paths.accounts)
+    ledger_rows = _read_dicts(paths.ledger_entries)
 
     assert customer_rows[0]["synthetic_name"] == 'Ana, "Árvore"'
     assert customer_rows[0]["birth_date"] == customers[0].birth_date.isoformat()
@@ -106,6 +121,9 @@ def test_csv_preserves_dates_money_and_escaped_text(batch_data: tuple) -> None:
     assert address_rows[0]["complement"] == 'Bloco "B", térreo'
     assert account_rows[0]["opening_balance"] == "123.40"
     assert account_rows[0]["opened_date"] == accounts[0].opened_date.isoformat()
+    assert ledger_rows[0]["amount"] == "123.40"
+    assert ledger_rows[0]["effective_at"].endswith("Z")
+    assert "+00:00" not in ledger_rows[0]["effective_at"]
 
 
 def test_repeated_export_produces_identical_bytes(batch_data: tuple) -> None:
@@ -164,13 +182,24 @@ def test_csv_files_can_be_read_back_with_valid_foreign_keys(
         paths.accounts,
         convert_options=pa_csv.ConvertOptions(column_types=ACCOUNT_SCHEMA),
     )
+    ledger_table = pa_csv.read_csv(
+        paths.ledger_entries,
+        convert_options=pa_csv.ConvertOptions(column_types=LEDGER_ENTRY_SCHEMA),
+    )
     customer_ids = set(customer_table["customer_id"].to_pylist())
 
     assert customer_table.num_rows == len(customers)
     assert address_table.num_rows == len(addresses)
     assert account_table.num_rows == len(accounts)
+    assert ledger_table.num_rows == len(accounts)
     assert set(address_table["customer_id"].to_pylist()) <= customer_ids
     assert set(account_table["customer_id"].to_pylist()) <= customer_ids
+    assert set(ledger_table["account_id"].to_pylist()) <= set(
+        account_table["account_id"].to_pylist()
+    )
+    assert all(
+        value.tzinfo is not None for value in ledger_table["effective_at"].to_pylist()
+    )
     assert all(
         isinstance(value, Decimal)
         for value in account_table["opening_balance"].to_pylist()

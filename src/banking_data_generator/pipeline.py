@@ -14,7 +14,11 @@ from banking_data_generator.accounting import (
     validate_ledger,
 )
 from banking_data_generator.config import BankingDataGeneratorConfig
-from banking_data_generator.domain.enums import AccountType
+from banking_data_generator.domain.enums import (
+    AccountType,
+    EntryDirection,
+    LedgerEntryType,
+)
 from banking_data_generator.domain.models import Account, Address, Customer
 from banking_data_generator.export import write_batch_csv
 from banking_data_generator.generation import (
@@ -36,10 +40,13 @@ class BatchPipelineResult:
     customers_file: Path
     addresses_file: Path
     accounts_file: Path
+    ledger_entries_file: Path
     manifest_file: Path
     customer_count: int
     address_count: int
     account_count: int
+    ledger_entry_count: int
+    opening_credit_total: Decimal
     seed: int
     reference_date: date
     generator_version: str
@@ -61,11 +68,21 @@ def run_batch_pipeline(
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
     reconcile_opening_balances(accounts, balances)
+    opening_credit_total = sum(
+        (
+            entry.amount
+            for entry in ledger_entries
+            if entry.entry_type is LedgerEntryType.OPENING_BALANCE
+            and entry.direction is EntryDirection.CREDIT
+        ),
+        Decimal("0.00"),
+    )
     publication = write_batch_csv(
         config,
         customers,
         addresses,
         accounts,
+        ledger_entries,
         project_root=project_root,
     )
     return BatchPipelineResult(
@@ -73,10 +90,13 @@ def run_batch_pipeline(
         customers_file=publication.paths.customers,
         addresses_file=publication.paths.addresses,
         accounts_file=publication.paths.accounts,
+        ledger_entries_file=publication.paths.ledger_entries,
         manifest_file=publication.paths.manifest,
         customer_count=len(customers),
         address_count=len(addresses),
         account_count=len(accounts),
+        ledger_entry_count=len(ledger_entries),
+        opening_credit_total=opening_credit_total,
         seed=config.seed,
         reference_date=config.reference_date,
         generator_version=publication.generator_version,
