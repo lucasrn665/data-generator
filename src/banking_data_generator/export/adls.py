@@ -47,7 +47,7 @@ class AzureAdlsDestination:
     ) -> RemotePublicationResult:
         manifest = validate_local_publication(local_directory)
         try:
-            from azure.core.exceptions import AzureError
+            from azure.core.exceptions import AzureError, ResourceExistsError
             from azure.identity import DefaultAzureCredential
             from azure.storage.filedatalake import DataLakeServiceClient
         except ImportError as error:
@@ -79,6 +79,7 @@ class AzureAdlsDestination:
                 raise RemotePublicationError(
                     f"publicação remota divergente já existe em '{final}'"
                 )
+            _ensure_parent_directories(filesystem, final, ResourceExistsError)
             directory = filesystem.get_directory_client(staging)
             directory.create_directory()
             filenames = sorted(manifest["files"])
@@ -87,7 +88,7 @@ class AzureAdlsDestination:
             _upload_file(directory, "manifest.json", local_directory / "manifest.json")
             if not _remote_matches(filesystem, staging, manifest):
                 raise RemotePublicationError("validação remota do staging falhou")
-            directory.rename_directory(final)
+            directory.rename_directory(new_name=f"{self.config.file_system}/{final}")
             return RemotePublicationResult("created", final, len(filenames) + 1)
         except RemotePublicationError:
             _cleanup_remote_staging(locals().get("filesystem"), locals().get("staging"))
@@ -100,7 +101,7 @@ class AzureAdlsDestination:
 
 
 def remote_batch_path(local_directory: Path) -> str:
-    """Extraia somente a partição determinística, sem caminho absoluto."""
+    """Converta o caminho local para o layout remoto sem schema ou seed."""
     parts = list(local_directory.parts)
     try:
         index = next(
@@ -110,11 +111,39 @@ def remote_batch_path(local_directory: Path) -> str:
         raise RemotePublicationError(
             "caminho local não contém partição de schema"
         ) from error
-    return "/".join(parts[index:])
+    relative = parts[index:]
+    try:
+        reference = next(
+            part for part in relative if part.startswith("reference_date=")
+        )
+        scenario_index = next(
+            i for i, part in enumerate(relative) if part.startswith("scenario=")
+        )
+        scenario = relative[scenario_index].removeprefix("scenario=")
+    except StopIteration as error:
+        raise RemotePublicationError(
+            "caminho local não contém referência e cenário"
+        ) from error
+    if scenario == "valid":
+        return f"{reference}/valid"
+    return f"{reference}/invalid/{scenario}"
 
 
 def _join(base: str, relative: str) -> str:
     return "/".join(part.strip("/") for part in (base, relative) if part)
+
+
+def _ensure_parent_directories(
+    filesystem: object, final: str, resource_exists_error: type[Exception]
+) -> None:
+    """Crie somente os pais ausentes, sem criar o diretório final."""
+    segments = [segment for segment in final.split("/") if segment]
+    for index in range(1, len(segments)):
+        path = "/".join(segments[:index])
+        try:
+            filesystem.get_directory_client(path).create_directory()
+        except resource_exists_error:
+            continue
 
 
 def _upload_file(directory: object, filename: str, local: Path) -> None:
