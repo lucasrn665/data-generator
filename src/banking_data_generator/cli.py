@@ -37,6 +37,7 @@ _SCENARIOS = (
     "duplicate_conflicting",
     "required_null",
     "orphan_foreign_key",
+    "late_event",
 )
 
 
@@ -164,6 +165,12 @@ def print_success_summary(result: BatchPipelineResult) -> None:
         print(f"campo-alvo de qualidade: {result.quality_target_field}")
     print(f"registros afetados: {result.quality_affected_count}")
     print(f"violações esperadas: {result.expected_violation_count}")
+    print(f"meta de eventos atrasados: {result.target_late_event_count}")
+    print(f"eventos atrasados observados: {result.observed_late_event_count}")
+    print(
+        "atraso observado (segundos): "
+        f"{result.minimum_observed_delay_seconds}..{result.maximum_observed_delay_seconds}"
+    )
     publication = "criada" if result.created else "idempotente já existente"
     print(f"publicação: {publication}")
     print(f"diretório de saída: {result.output_directory}")

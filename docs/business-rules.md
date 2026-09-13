@@ -39,8 +39,12 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
 - A meta de recusas usa `ROUND_HALF_UP`. A regra sintética preenche a meta apenas
   quando a tentativa seria válida; restrições legítimas podem elevar o total
   real e são contabilizadas como recusas adicionais.
-- `event_at` e `ingested_at` são atrasos determinísticos curtos em relação a
-  `effective_at`; eventos atrasados de negócio ainda não são gerados.
+- `event_at` representa a ocorrência econômica e coincide com `effective_at`;
+  `ingested_at` representa a chegada. Regras financeiras usam o instante
+  econômico, nunca a chegada.
+- No conjunto canônico, o atraso operacional fica no intervalo configurado e
+  não supera o limite tardio. `late_event` altera somente `ingested_at`, com
+  atraso estritamente superior ao limite, e ordena a tabela por chegada.
 - Cada compra aprovada pode receber no máximo um estorno concluído, selecionado
   por seed própria e cota `ROUND_HALF_UP`. O estorno é integral, referencia a
   compra imutável, gera um crédito e recompõe saldo e consumo no dia da compra.

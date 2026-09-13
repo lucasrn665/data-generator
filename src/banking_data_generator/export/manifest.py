@@ -40,6 +40,7 @@ def build_manifest(
     transfer_summary: Mapping[str, Any],
     fraud_label_summary: Mapping[str, Any],
     quality_summary: Mapping[str, Any],
+    late_event_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Construa o manifesto a partir dos CSVs já escritos e validados."""
     files = {
@@ -86,6 +87,26 @@ def build_manifest(
                 "history_days": config.transactions.history_days,
                 "declined_rate_overall": str(config.transactions.declined_rate_overall),
                 "fraud_rate_overall": str(config.transactions.fraud_rate_overall),
+                "late_event_rate_overall": str(
+                    config.transactions.late_event_rate_overall
+                ),
+                "ingestion_delay": {
+                    "late_threshold_seconds": (
+                        config.transactions.ingestion_delay.late_threshold_seconds
+                    ),
+                    "operational_min_seconds": (
+                        config.transactions.ingestion_delay.operational_min_seconds
+                    ),
+                    "operational_max_seconds": (
+                        config.transactions.ingestion_delay.operational_max_seconds
+                    ),
+                    "late_min_seconds": (
+                        config.transactions.ingestion_delay.late_min_seconds
+                    ),
+                    "late_max_seconds": (
+                        config.transactions.ingestion_delay.late_max_seconds
+                    ),
+                },
             },
             "transfers": {
                 "count": config.transfers.count,
@@ -107,6 +128,7 @@ def build_manifest(
         "transfer_summary": dict(transfer_summary),
         "fraud_label_summary": dict(fraud_label_summary),
         "quality_summary": dict(quality_summary),
+        "late_event_summary": dict(late_event_summary),
     }
 
 

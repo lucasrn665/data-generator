@@ -44,6 +44,12 @@ transactions:
   reversal_rate_of_approved: 0.01
   # Proporção de todos os eventos; independente de fraude e status.
   late_event_rate_overall: 0.02
+  ingestion_delay:
+    late_threshold_seconds: 300
+    operational_min_seconds: 0
+    operational_max_seconds: 30
+    late_min_seconds: 301
+    late_max_seconds: 86400
 
 transfers:
   count: 10000

@@ -24,6 +24,9 @@ implementados; as demais entidades permanecem planejadas.
   aprovadas ou recusadas; aprovações possuem débito e recusas não possuem
   lançamento. Estornos concluídos referenciam uma compra aprovada e possuem um
   crédito integral. Nenhum evento contém PAN ou credenciais.
+  `event_at` é o instante econômico; `ingested_at` é o instante de chegada,
+  ambos timestamps UTC. `effective_at` permanece igual ao instante econômico
+  para compatibilidade contábil do modelo.
 - **Rótulo de transação**: ground truth sintético associado exatamente a cada
   tentativa original de compra. Não integra o evento de transação e não existe
   para estornos. O score usa `Decimal` entre `0.00` e `100.00`.

@@ -52,12 +52,20 @@ carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.6.1/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.7.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 Use `--scenario` para publicar, separadamente, `duplicate_exact`,
-`duplicate_conflicting`, `required_null` ou `orphan_foreign_key`. Sem a opção,
+`duplicate_conflicting`, `required_null`, `orphan_foreign_key` ou `late_event`. Sem a opção,
 o cenário é `valid`. Todos mantêm os mesmos nove CSVs; somente o CSV alvo e o
 manifesto diferem do conjunto canônico.
+
+Em `transactions.csv`, `event_at` representa a ocorrência econômica e
+`ingested_at` representa a chegada à plataforma. O cenário válido usa atraso
+operacional configurado de 0 a 30 segundos; `late_event` seleciona, com cota
+`ROUND_HALF_UP`, eventos cuja chegada ultrapassa o limite configurado de 300
+segundos e ordena fisicamente o CSV por chegada. A contabilidade permanece
+ordenada pelo instante econômico. Esta simulação prepara exercícios futuros de
+watermark e dados fora de ordem, sem implementar Spark, Databricks ou streaming.
 
 ## Configuração
 

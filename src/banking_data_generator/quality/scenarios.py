@@ -1,8 +1,9 @@
 """Mutações determinísticas aplicadas somente às tabelas de publicação."""
 
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 import pyarrow as pa
@@ -26,6 +27,7 @@ _VIOLATION_TYPES = {
     "duplicate_conflicting": "duplicate_primary_key_conflicting",
     "required_null": "required_field_null",
     "orphan_foreign_key": "orphan_foreign_key",
+    "late_event": "late_event",
 }
 _ALLOWED_FIELDS = {
     "duplicate_conflicting": {
@@ -69,6 +71,11 @@ class QualityScenarioResult:
     duplicate_key_count: int
     canonical_validation_passed: bool
     version: str
+    late_event_target_count: int = 0
+    late_event_observed_count: int = 0
+    minimum_delay_seconds: int = 0
+    maximum_delay_seconds: int = 0
+    late_threshold_seconds: int = 0
 
 
 def calculate_affected_count(record_count: int, rate: Decimal) -> int:
@@ -85,18 +92,27 @@ def apply_quality_scenario(
     """Crie tabelas novas e confirme que somente a violação esperada surgiu."""
     copied = dict(tables)
     scenario = config.quality.scenario
-    entity = config.quality.entity
+    entity = "transactions" if scenario == "late_event" else config.quality.entity
     filename = _FILENAMES[entity]
     canonical = tables[filename]
+    _validate_canonical_arrivals(tables["transactions.csv"], config)
     original_count = canonical.num_rows
     calculated = (
         0
         if scenario == "valid"
+        else calculate_affected_count(
+            len(tables["transactions.csv"]), config.transactions.late_event_rate_overall
+        )
+        if scenario == "late_event"
         else calculate_affected_count(original_count, config.quality.rate)
     )
     selected = _select_indices(original_count, calculated, config, scenario)
     field = (
-        config.quality.field if scenario not in {"valid", "duplicate_exact"} else None
+        "ingested_at"
+        if scenario == "late_event"
+        else config.quality.field
+        if scenario not in {"valid", "duplicate_exact"}
+        else None
     )
     if scenario in _ALLOWED_FIELDS and field not in _ALLOWED_FIELDS[scenario].get(
         entity, set()
@@ -107,6 +123,9 @@ def apply_quality_scenario(
         )
     if scenario == "valid":
         published = canonical
+    elif scenario == "late_event":
+        published = _apply_late_events(canonical, selected, config)
+        copied[filename] = published
     else:
         published = _mutate_table(canonical, scenario, field, selected)
         copied[filename] = published
@@ -115,7 +134,11 @@ def apply_quality_scenario(
         scenario=scenario,
         target_entity=entity,
         target_field=field,
-        configured_rate=config.quality.rate,
+        configured_rate=(
+            config.transactions.late_event_rate_overall
+            if scenario == "late_event"
+            else config.quality.rate
+        ),
         calculated_count=calculated,
         affected_count=len(selected),
         expected_violation_count=len(selected),
@@ -127,9 +150,56 @@ def apply_quality_scenario(
         duplicate_key_count=(len(selected) if scenario.startswith("duplicate") else 0),
         canonical_validation_passed=True,
         version=QUALITY_SCENARIO_VERSION,
+        late_event_target_count=(calculated if scenario == "late_event" else 0),
+        late_event_observed_count=(calculated if scenario == "late_event" else 0),
+        minimum_delay_seconds=_delay_extreme(copied["transactions.csv"], min),
+        maximum_delay_seconds=_delay_extreme(copied["transactions.csv"], max),
+        late_threshold_seconds=config.transactions.ingestion_delay.late_threshold_seconds,
     )
-    _validate_scenario_result(tables, result)
+    _validate_scenario_result(tables, result, config)
     return result
+
+
+def _apply_late_events(
+    table: pa.Table, selected: list[int], config: BankingDataGeneratorConfig
+) -> pa.Table:
+    records = table.to_pylist()
+    context = GenerationContext.create(
+        config.seed, "quality_scenario:late_event:delays"
+    )
+    bounds = config.transactions.ingestion_delay
+    for index in selected:
+        records[index] = {
+            **records[index],
+            "ingested_at": records[index]["event_at"]
+            + timedelta(
+                seconds=context.random.randint(
+                    bounds.late_min_seconds, bounds.late_max_seconds
+                )
+            ),
+        }
+    records.sort(key=lambda row: (row["ingested_at"], row["transaction_id"]))
+    return pa.Table.from_pylist(records, schema=table.schema)
+
+
+def _validate_canonical_arrivals(
+    table: pa.Table, config: BankingDataGeneratorConfig
+) -> None:
+    maximum = config.transactions.ingestion_delay.operational_max_seconds
+    for row in table.to_pylist():
+        delay = int((row["ingested_at"] - row["event_at"]).total_seconds())
+        if delay < 0:
+            _fail("ingested_at anterior a event_at no conjunto canônico")
+        if delay > maximum:
+            _fail("conjunto canônico contém atraso fora do intervalo operacional")
+
+
+def _delay_extreme(table: pa.Table, operation: Callable[[list[int]], int]) -> int:
+    delays = [
+        int((row["ingested_at"] - row["event_at"]).total_seconds())
+        for row in table.to_pylist()
+    ]
+    return operation(delays) if delays else 0
 
 
 def _select_indices(
@@ -176,6 +246,7 @@ def _mutate_table(
 def _validate_scenario_result(
     canonical_tables: Mapping[str, pa.Table],
     result: QualityScenarioResult,
+    config: BankingDataGeneratorConfig,
 ) -> None:
     target_filename = _FILENAMES[result.target_entity]
     for filename, canonical in canonical_tables.items():
@@ -187,6 +258,9 @@ def _validate_scenario_result(
     if result.scenario == "valid":
         if not published.equals(canonical):
             _fail("o cenário válido foi alterado")
+        return
+    if result.scenario == "late_event":
+        validate_late_event_scenario(canonical, published, result, config)
         return
     original = canonical.to_pylist()
     mutated = published.to_pylist()
@@ -231,3 +305,53 @@ def _validate_scenario_result(
 
 def _fail(message: str) -> None:
     raise QualityScenarioError(f"Cenário de qualidade inválido: {message}.")
+
+
+def validate_late_event_scenario(
+    canonical: pa.Table,
+    published: pa.Table,
+    result: QualityScenarioResult,
+    config: BankingDataGeneratorConfig,
+) -> None:
+    before = {row["transaction_id"]: row for row in canonical.to_pylist()}
+    rows = published.to_pylist()
+    if rows != sorted(
+        rows, key=lambda row: (row["ingested_at"], row["transaction_id"])
+    ):
+        _fail("eventos tardios não estão ordenados por chegada")
+    changed = 0
+    observed = 0
+    for row in rows:
+        original = before[row["transaction_id"]]
+        differences = {key for key in row if row[key] != original[key]}
+        if differences:
+            if differences != {"ingested_at"}:
+                _fail("evento tardio alterou coluna além de ingested_at")
+            changed += 1
+        if row["ingested_at"] < row["event_at"]:
+            _fail("ingested_at anterior a event_at")
+        delay = int((row["ingested_at"] - row["event_at"]).total_seconds())
+        if delay > result.late_threshold_seconds:
+            observed += 1
+        if differences and delay <= result.late_threshold_seconds:
+            _fail("evento selecionado não ultrapassa o limite tardio")
+        if not differences and delay > result.late_threshold_seconds:
+            _fail("evento não selecionado ultrapassa o limite tardio")
+    if changed != result.late_event_target_count:
+        _fail("quantidade observada de eventos tardios divergente")
+    if observed != result.late_event_observed_count:
+        _fail("classificação observada de eventos tardios divergente")
+    expected_indices = _select_indices(
+        canonical.num_rows, result.late_event_target_count, config, "late_event"
+    )
+    canonical_rows = canonical.to_pylist()
+    expected_ids = {
+        canonical_rows[index]["transaction_id"] for index in expected_indices
+    }
+    changed_ids = {
+        row["transaction_id"]
+        for row in rows
+        if row["ingested_at"] != before[row["transaction_id"]]["ingested_at"]
+    }
+    if changed_ids != expected_ids:
+        _fail("seleção de eventos tardios não é a determinística esperada")

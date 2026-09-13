@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from banking_data_generator.config import BankingDataGeneratorConfig
@@ -50,6 +50,7 @@ def generate_purchase_reversals(
     eligible = [item for item in approved if item.effective_at < end]
     effective_count = min(target, len(eligible))
     context = GenerationContext.create(config.seed, "reversals")
+    arrival_context = GenerationContext.create(config.seed, "reversal_ingestion_delay")
     selected_indexes = sorted(
         context.random.sample(range(len(eligible)), effective_count)
     )
@@ -71,7 +72,13 @@ def generate_purchase_reversals(
             currency=original.currency,
             effective_at=effective_at,
             event_at=effective_at,
-            ingested_at=effective_at,
+            ingested_at=effective_at
+            + timedelta(
+                seconds=arrival_context.random.randint(
+                    config.transactions.ingestion_delay.operational_min_seconds,
+                    config.transactions.ingestion_delay.operational_max_seconds,
+                )
+            ),
             decline_reason=None,
             original_transaction_id=original.transaction_id,
         )

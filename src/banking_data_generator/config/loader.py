@@ -14,6 +14,7 @@ from banking_data_generator.config.models import (
     CardsConfig,
     CustomersConfig,
     DailyPurchaseLimitConfig,
+    IngestionDelayConfig,
     InitialBalanceConfig,
     MerchantsConfig,
     OutputConfig,
@@ -50,6 +51,14 @@ _TRANSACTIONS_FIELDS = {
     "declined_rate_overall",
     "reversal_rate_of_approved",
     "late_event_rate_overall",
+    "ingestion_delay",
+}
+_INGESTION_DELAY_FIELDS = {
+    "late_threshold_seconds",
+    "operational_min_seconds",
+    "operational_max_seconds",
+    "late_min_seconds",
+    "late_max_seconds",
 }
 _PURCHASE_AMOUNT_FIELDS = {"min", "max"}
 _TRANSFERS_FIELDS = {
@@ -66,6 +75,7 @@ _QUALITY_SCENARIOS = {
     "duplicate_conflicting",
     "required_null",
     "orphan_foreign_key",
+    "late_event",
 }
 _QUALITY_ENTITIES = {
     "customers",
@@ -141,6 +151,12 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     purchase_amount = _mapping(
         transactions["purchase_amount"], "transactions.purchase_amount"
     )
+    ingestion_delay = _mapping(
+        transactions["ingestion_delay"], "transactions.ingestion_delay"
+    )
+    _validate_fields(
+        ingestion_delay, _INGESTION_DELAY_FIELDS, "transactions.ingestion_delay"
+    )
     _validate_fields(
         purchase_amount, _PURCHASE_AMOUNT_FIELDS, "transactions.purchase_amount"
     )
@@ -199,6 +215,32 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     quality_entity = _choice(quality["entity"], "quality.entity", _QUALITY_ENTITIES)
     quality_field = _optional_string(quality["field"], "quality.field")
     _validate_quality_target(quality_scenario, quality_entity, quality_field)
+    delay_values = {
+        name: _non_negative_int(value, f"transactions.ingestion_delay.{name}")
+        for name, value in ingestion_delay.items()
+    }
+    _validate_order(
+        delay_values["operational_min_seconds"],
+        delay_values["operational_max_seconds"],
+        "transactions.ingestion_delay.operational_min_seconds",
+        "transactions.ingestion_delay.operational_max_seconds",
+    )
+    _validate_order(
+        delay_values["late_min_seconds"],
+        delay_values["late_max_seconds"],
+        "transactions.ingestion_delay.late_min_seconds",
+        "transactions.ingestion_delay.late_max_seconds",
+    )
+    if delay_values["operational_max_seconds"] > delay_values["late_threshold_seconds"]:
+        _fail(
+            "transactions.ingestion_delay.operational_max_seconds",
+            "deve ser menor ou igual ao limite tardio",
+        )
+    if delay_values["late_min_seconds"] <= delay_values["late_threshold_seconds"]:
+        _fail(
+            "transactions.ingestion_delay.late_min_seconds",
+            "deve ser maior que o limite tardio",
+        )
 
     minimum_accounts = _positive_int(
         accounts["min_per_customer"], "accounts.min_per_customer"
@@ -269,6 +311,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
                 transactions["late_event_rate_overall"],
                 "transactions.late_event_rate_overall",
             ),
+            ingestion_delay=IngestionDelayConfig(**delay_values),
         ),
         transfers=TransfersConfig(
             count=_non_negative_int(transfers["count"], "transfers.count"),

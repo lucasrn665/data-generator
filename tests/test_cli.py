@@ -89,8 +89,8 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "transferências concluídas:" in captured.out
     assert "meta de fraude sintética:" in captured.out
     assert "fraudes sintéticas efetivas:" in captured.out
-    assert "versão do gerador: 0.8.0" in captured.out
-    assert "versão do schema: 1.6.1" in captured.out
+    assert "versão do gerador: 0.9.0" in captured.out
+    assert "versão do schema: 1.7.0" in captured.out
     assert "cenário: valid" in captured.out
     assert "publicação: criada" in captured.out
     assert (
@@ -102,7 +102,7 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.6.1"
+        / "schema_version=1.7.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -145,7 +145,7 @@ def test_cli_publishes_selected_scenario(
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.6.1"
+        / "schema_version=1.7.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=duplicate_exact"

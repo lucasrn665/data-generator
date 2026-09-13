@@ -411,6 +411,23 @@ def write_batch_csv(
         "duplicate_key_count": quality_result.duplicate_key_count,
         "canonical_validation_passed": quality_result.canonical_validation_passed,
     }
+    transaction_type_counts = Counter(
+        row["transaction_type"] for row in tables["transactions.csv"].to_pylist()
+    )
+    late_event_summary: dict[str, Any] = {
+        "transaction_event_count": len(transactions),
+        "target_late_event_count": quality_result.late_event_target_count,
+        "observed_late_event_count": quality_result.late_event_observed_count,
+        "configured_rate": str(config.transactions.late_event_rate_overall),
+        "late_threshold_seconds": (
+            config.transactions.ingestion_delay.late_threshold_seconds
+        ),
+        "minimum_observed_delay_seconds": quality_result.minimum_delay_seconds,
+        "maximum_observed_delay_seconds": quality_result.maximum_delay_seconds,
+        "transaction_count_by_type": dict(sorted(transaction_type_counts.items())),
+        "financial_rules_validated_before_scenario": True,
+        "quality_scenario_version": quality_result.version,
+    }
     final_paths = build_batch_csv_paths(config, project_root=project_root)
     final_paths.directory.parent.mkdir(parents=True, exist_ok=True)
     staging_directory = Path(
@@ -430,6 +447,7 @@ def write_batch_csv(
             transfer_summary,
             fraud_label_summary,
             quality_summary,
+            late_event_summary,
         )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)

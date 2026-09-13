@@ -104,6 +104,10 @@ class BatchPipelineResult:
     quality_target_field: str | None
     quality_affected_count: int
     expected_violation_count: int
+    target_late_event_count: int
+    observed_late_event_count: int
+    minimum_observed_delay_seconds: int
+    maximum_observed_delay_seconds: int
 
 
 def run_batch_pipeline(
@@ -205,7 +209,9 @@ def run_batch_pipeline(
     )
     quality_manifest = json.loads(
         publication.paths.manifest.read_text(encoding="utf-8")
-    )["quality_summary"]
+    )
+    quality_summary = quality_manifest["quality_summary"]
+    late_summary = quality_manifest["late_event_summary"]
     return BatchPipelineResult(
         output_directory=publication.paths.directory,
         customers_file=publication.paths.customers,
@@ -300,10 +306,14 @@ def run_batch_pipeline(
         schema_version=publication.schema_version,
         created=publication.created,
         scenario=config.quality.scenario,
-        quality_target_entity=quality_manifest["target_entity"],
-        quality_target_field=quality_manifest["target_field"],
-        quality_affected_count=quality_manifest["affected_count"],
-        expected_violation_count=quality_manifest["expected_violation_count"],
+        quality_target_entity=quality_summary["target_entity"],
+        quality_target_field=quality_summary["target_field"],
+        quality_affected_count=quality_summary["affected_count"],
+        expected_violation_count=quality_summary["expected_violation_count"],
+        target_late_event_count=late_summary["target_late_event_count"],
+        observed_late_event_count=late_summary["observed_late_event_count"],
+        minimum_observed_delay_seconds=late_summary["minimum_observed_delay_seconds"],
+        maximum_observed_delay_seconds=late_summary["maximum_observed_delay_seconds"],
     )
 
 

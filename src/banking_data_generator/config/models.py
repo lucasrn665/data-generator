@@ -63,6 +63,17 @@ class CardsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class IngestionDelayConfig:
+    """Intervalos, em segundos, da simulação de chegada dos eventos."""
+
+    late_threshold_seconds: int
+    operational_min_seconds: int
+    operational_max_seconds: int
+    late_min_seconds: int
+    late_max_seconds: int
+
+
+@dataclass(frozen=True, slots=True)
 class TransactionsConfig:
     """Parâmetros para a futura geração de transações."""
 
@@ -73,6 +84,7 @@ class TransactionsConfig:
     declined_rate_overall: Decimal
     reversal_rate_of_approved: Decimal
     late_event_rate_overall: Decimal
+    ingestion_delay: IngestionDelayConfig
 
 
 @dataclass(frozen=True, slots=True)

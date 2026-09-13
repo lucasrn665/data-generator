@@ -5,6 +5,7 @@ from banking_data_generator.quality.scenarios import (
     QualityScenarioResult,
     apply_quality_scenario,
     calculate_affected_count,
+    validate_late_event_scenario,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "QualityScenarioResult",
     "apply_quality_scenario",
     "calculate_affected_count",
+    "validate_late_event_scenario",
 ]

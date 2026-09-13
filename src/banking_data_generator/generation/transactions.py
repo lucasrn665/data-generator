@@ -129,8 +129,13 @@ def generate_card_purchases(
             if reason is not None
             else TransactionStatus.APPROVED
         )
-        event_at = effective_at + timedelta(seconds=context.random.randint(0, 30))
-        ingested_at = event_at + timedelta(seconds=context.random.randint(0, 30))
+        event_at = effective_at
+        delay = config.transactions.ingestion_delay
+        ingested_at = event_at + timedelta(
+            seconds=context.random.randint(
+                delay.operational_min_seconds, delay.operational_max_seconds
+            )
+        )
         transaction = Transaction(
             transaction_id=transaction_id,
             account_id=account.account_id,

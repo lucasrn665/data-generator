@@ -42,6 +42,9 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.transactions.purchase_amount.min == Decimal("1.00")
     assert config.transactions.purchase_amount.max == Decimal("500.00")
     assert config.transactions.history_days == 365
+    assert config.transactions.ingestion_delay.late_threshold_seconds == 300
+    assert config.transactions.ingestion_delay.operational_max_seconds == 30
+    assert config.transactions.ingestion_delay.late_min_seconds == 301
     assert config.transfers.count == 10000
     assert config.transfers.min_amount == Decimal("10.00")
     assert config.transfers.max_amount == Decimal("1000.00")
@@ -51,6 +54,36 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.quality.rate == Decimal("0.01")
     assert config.quality.entity == "customers"
     assert config.quality.field == "synthetic_name"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("operational_min_seconds", -1),
+        ("operational_max_seconds", 301),
+        ("late_min_seconds", 300),
+        ("late_max_seconds", -1),
+    ],
+)
+def test_rejects_invalid_ingestion_delay(
+    tmp_path: Path,
+    valid_config: dict[str, object],
+    field: str,
+    value: int,
+) -> None:
+    config = deepcopy(valid_config)
+    config["transactions"]["ingestion_delay"][field] = value
+    with pytest.raises(ConfigError, match="ingestion_delay"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_unknown_ingestion_delay_property(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    config["transactions"]["ingestion_delay"]["unknown"] = 1
+    with pytest.raises(ConfigError, match="propriedades desconhecidas"):
+        load_config(write_config(tmp_path, config))
 
 
 def test_rejects_missing_config_file(tmp_path: Path) -> None:

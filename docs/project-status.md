@@ -107,6 +107,9 @@ Consulte o [modelo de domínio](domain-model.md), as
   conjunto canônico reconciliado.
 - Contrato batch `1.6.1`, gerador `0.8.0` e contrato de qualidade `1.0.0`, com
   separação por `scenario=<nome>` e idempotência integral por cenário.
+- Contrato batch `1.7.0`, gerador `0.9.0` e contrato de qualidade `1.1.0`, com
+  distinção entre `event_at` e `ingested_at` e cenário determinístico
+  `late_event`. As publicações 1.6.0 e 1.6.1 permanecem independentes.
 
 ## Testes e validações disponíveis
 
@@ -127,7 +130,8 @@ Consulte o [modelo de domínio](domain-model.md), as
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
 - Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
   datas, limites, bloqueio e schemas de cartões e estabelecimentos.
-- pytest: 195 testes passando na execução atual com Python 3.14.4.
+- A validação temporal cobre atraso operacional, cota tardia, ordenação por
+  chegada e ausência de efeitos financeiros.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
@@ -146,8 +150,8 @@ Consulte o [modelo de domínio](domain-model.md), as
 
 ## Próxima etapa planejada
 
-Ampliar cenários de qualidade em etapas separadas, preservando o conjunto
-válido e sem combinar mutações nesta versão.
+Explorar watermark e processamento por tempo de evento em integrações futuras,
+sem combinar cenários nem introduzir streaming nesta versão.
 
 ## Comandos principais
 

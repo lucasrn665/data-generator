@@ -48,7 +48,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.6.1"
+        / "schema_version=1.7.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -90,8 +90,8 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.approved_fraud_count + result.declined_fraud_count == 15
     assert result.transfer_attempt_count == 20
     assert result.completed_transfer_count + result.declined_transfer_count == 20
-    assert result.generator_version == "0.8.0"
-    assert result.schema_version == "1.6.1"
+    assert result.generator_version == "0.9.0"
+    assert result.schema_version == "1.7.0"
     assert result.scenario == "valid"
     assert result.expected_violation_count == 0
     assert result.created is True
@@ -239,7 +239,7 @@ def test_quality_scenarios_coexist_and_only_change_target_file(
     quality = manifest["quality_summary"]
     assert manifest["scenario"] == scenario
     assert manifest["quality_scenarios"] == [scenario]
-    assert quality["quality_scenario_version"] == "1.0.0"
+    assert quality["quality_scenario_version"] == "1.1.0"
     assert quality["target_entity"] == entity
     assert quality["target_field"] == field
     assert quality["affected_count"] == result.quality_affected_count
@@ -247,6 +247,7 @@ def test_quality_scenarios_coexist_and_only_change_target_file(
     assert quality["calculated_count"] == quality["affected_count"]
     assert quality["expected_violation_count"] == quality["affected_count"]
     assert quality["expected_violation_type"] != "none"
+    assert manifest["late_event_summary"]["observed_late_event_count"] == 0
     if scenario.startswith("duplicate"):
         assert quality["published_record_count"] == (
             quality["original_record_count"] + quality["additional_row_count"]
@@ -263,7 +264,7 @@ def test_quality_scenarios_coexist_and_only_change_target_file(
     assert run_batch_pipeline(scenario_config, tmp_path).created is False
 
 
-def test_schema_160_coexists_unchanged_with_161_and_canonical_csvs_match(
+def test_schema_160_coexists_unchanged_with_170_and_non_transaction_csvs_match(
     tmp_path: Path,
     pipeline_config: BankingDataGeneratorConfig,
 ) -> None:
@@ -290,9 +291,6 @@ def test_schema_160_coexists_unchanged_with_161_and_canonical_csvs_match(
         "transaction_labels.csv": (
             "344f41789de28b716be717d080e9943a81ad2916e073979c347a9aa2dd660366"
         ),
-        "transactions.csv": (
-            "a3c09d541ab58ff0f3b3e0b42c7f70c55cdc39d70c32eb39dc9ca40778ce22c7"
-        ),
         "transfers.csv": (
             "e23ff97977864aa690bd518fb90559af3d2e0f18d665af0c9716c8d9abd1ddf2"
         ),
@@ -300,6 +298,7 @@ def test_schema_160_coexists_unchanged_with_161_and_canonical_csvs_match(
     assert {
         path.name: sha256(path.read_bytes()).hexdigest()
         for path in current.output_directory.glob("*.csv")
+        if path.name != "transactions.csv"
     } == schema_160_hashes
     old = (
         tmp_path
@@ -322,11 +321,16 @@ def test_schema_160_coexists_unchanged_with_161_and_canonical_csvs_match(
         encoding="utf-8",
     )
     old_snapshot = {path.name: path.read_bytes() for path in old.iterdir()}
+    old_161 = Path(str(old).replace("schema_version=1.6.0", "schema_version=1.6.1"))
+    old_161.mkdir(parents=True)
+    marker_161 = old_161 / "manifest.json"
+    marker_161.write_text("legacy-1.6.1\n", encoding="utf-8")
 
     repeated = run_batch_pipeline(pipeline_config, tmp_path)
 
     assert repeated.created is False
     assert old_snapshot == {path.name: path.read_bytes() for path in old.iterdir()}
+    assert marker_161.read_text(encoding="utf-8") == "legacy-1.6.1\n"
     assert current.manifest_file.read_bytes() != (old / "manifest.json").read_bytes()
     for current_file in current.output_directory.glob("*.csv"):
         assert current_file.read_bytes() == (old / current_file.name).read_bytes()
