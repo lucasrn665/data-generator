@@ -47,7 +47,7 @@ posteriores.
 
 ## Cenários controlados implementados
 
-O contrato de qualidade `1.1.0` oferece um cenário por execução:
+O contrato de qualidade `1.2.0` oferece um cenário por execução:
 
 - `duplicate_exact`: acrescenta cópias completas com a mesma chave primária;
 - `duplicate_conflicting`: acrescenta cópias com a mesma chave e um campo
@@ -57,6 +57,12 @@ O contrato de qualidade `1.1.0` oferece um cenário por execução:
 - `orphan_foreign_key`: substitui uma FK autorizada por `SYN-MISSING-*`.
 - `late_event`: altera apenas `ingested_at` de compras e estornos selecionados,
   preserva `event_at` e ordena `transactions.csv` por ordem de chegada.
+- `schema_additive_column`: acrescenta `source_channel` ao final;
+- `schema_missing_column`: remove fisicamente `merchant_id`;
+- `schema_renamed_column`: renomeia `merchant_id` para `counterparty_id`;
+- `schema_incompatible_value`: substitui uma cota de valores por
+  `INVALID_AMOUNT_<valor original>`;
+- `schema_unknown_enum`: substitui uma cota de status por `pending_review`.
 
 A seleção usa uma seed exclusiva por cenário. A quantidade é a contagem da
 entidade multiplicada pela taxa e arredondada com `ROUND_HALF_UP`; não existe
@@ -70,7 +76,7 @@ permitidos apenas nesses campos descritivos. FKs órfãs estão limitadas a
 `addresses.customer_id`, `accounts.customer_id`, `cards.account_id` e
 `transactions.merchant_id`.
 
-Cada cenário fica em `scenario=<nome>` sob o schema `1.7.0`; o manifesto registra
+Cada cenário fica em `scenario=<nome>` sob o schema `1.7.1`; o manifesto registra
 contagens original/publicada, seleção, linhas adicionais, chaves duplicadas,
 tipo e quantidade esperada de violações e confirmação da validação canônica.
 
@@ -79,3 +85,9 @@ configuração padrão. Eventos fora de ordem surgem porque a ordem econômica e
 ordem de chegada podem divergir. Os quatro cenários anteriores mantêm zero
 eventos intencionalmente tardios. Watermark real, Event Hubs e Databricks ficam
 para integrações futuras.
+
+As incompatibilidades de schema são mutações somente da representação CSV,
+aplicadas após a validação canônica. CSV não possui tipos físicos; a mutação de
+valor representa a incompatibilidade com o `decimal128(18, 2)` esperado pelo
+consumidor. O modelo, os schemas canônicos e as regras financeiras não são
+flexibilizados.

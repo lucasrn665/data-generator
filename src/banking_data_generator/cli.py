@@ -38,6 +38,11 @@ _SCENARIOS = (
     "required_null",
     "orphan_foreign_key",
     "late_event",
+    "schema_additive_column",
+    "schema_missing_column",
+    "schema_renamed_column",
+    "schema_incompatible_value",
+    "schema_unknown_enum",
 )
 
 

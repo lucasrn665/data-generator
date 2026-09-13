@@ -110,6 +110,9 @@ Consulte o [modelo de domínio](domain-model.md), as
 - Contrato batch `1.7.0`, gerador `0.9.0` e contrato de qualidade `1.1.0`, com
   distinção entre `event_at` e `ingested_at` e cenário determinístico
   `late_event`. As publicações 1.6.0 e 1.6.1 permanecem independentes.
+- Contrato batch `1.7.1`, gerador `0.10.0` e contrato de qualidade `1.2.0`,
+  com cinco cenários determinísticos de incompatibilidade de schema apenas na
+  representação de exportação de `transactions.csv`.
 
 ## Testes e validações disponíveis
 

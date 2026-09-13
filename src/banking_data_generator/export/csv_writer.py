@@ -410,6 +410,13 @@ def write_batch_csv(
         "additional_row_count": quality_result.additional_row_count,
         "duplicate_key_count": quality_result.duplicate_key_count,
         "canonical_validation_passed": quality_result.canonical_validation_passed,
+        "mutation_type": quality_result.expected_violation_type,
+        "observed_columns": list(quality_result.observed_columns),
+        "expected_columns": list(quality_result.expected_columns),
+        "added_column": quality_result.added_column,
+        "missing_column": quality_result.missing_column,
+        "renamed_from": quality_result.renamed_from,
+        "renamed_to": quality_result.renamed_to,
     }
     transaction_type_counts = Counter(
         row["transaction_type"] for row in tables["transactions.csv"].to_pylist()

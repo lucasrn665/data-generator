@@ -76,6 +76,18 @@ _QUALITY_SCENARIOS = {
     "required_null",
     "orphan_foreign_key",
     "late_event",
+    "schema_additive_column",
+    "schema_missing_column",
+    "schema_renamed_column",
+    "schema_incompatible_value",
+    "schema_unknown_enum",
+}
+_SCHEMA_QUALITY_SCENARIOS = {
+    "schema_additive_column",
+    "schema_missing_column",
+    "schema_renamed_column",
+    "schema_incompatible_value",
+    "schema_unknown_enum",
 }
 _QUALITY_ENTITIES = {
     "customers",
@@ -215,6 +227,11 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     quality_entity = _choice(quality["entity"], "quality.entity", _QUALITY_ENTITIES)
     quality_field = _optional_string(quality["field"], "quality.field")
     _validate_quality_target(quality_scenario, quality_entity, quality_field)
+    if (
+        quality_scenario in _SCHEMA_QUALITY_SCENARIOS
+        and quality_entity != "transactions"
+    ):
+        _fail("quality.entity", "deve ser 'transactions' para cenários de schema")
     delay_values = {
         name: _non_negative_int(value, f"transactions.ingestion_delay.{name}")
         for name, value in ingestion_delay.items()

@@ -28,6 +28,18 @@ _VIOLATION_TYPES = {
     "required_null": "required_field_null",
     "orphan_foreign_key": "orphan_foreign_key",
     "late_event": "late_event",
+    "schema_additive_column": "schema_additive_column",
+    "schema_missing_column": "schema_missing_column",
+    "schema_renamed_column": "schema_renamed_column",
+    "schema_incompatible_value": "schema_incompatible_value",
+    "schema_unknown_enum": "schema_unknown_enum",
+}
+_SCHEMA_SCENARIOS = {
+    "schema_additive_column",
+    "schema_missing_column",
+    "schema_renamed_column",
+    "schema_incompatible_value",
+    "schema_unknown_enum",
 }
 _ALLOWED_FIELDS = {
     "duplicate_conflicting": {
@@ -76,6 +88,12 @@ class QualityScenarioResult:
     minimum_delay_seconds: int = 0
     maximum_delay_seconds: int = 0
     late_threshold_seconds: int = 0
+    observed_columns: tuple[str, ...] = ()
+    added_column: str | None = None
+    missing_column: str | None = None
+    renamed_from: str | None = None
+    renamed_to: str | None = None
+    expected_columns: tuple[str, ...] = ()
 
 
 def calculate_affected_count(record_count: int, rate: Decimal) -> int:
@@ -92,7 +110,11 @@ def apply_quality_scenario(
     """Crie tabelas novas e confirme que somente a violação esperada surgiu."""
     copied = dict(tables)
     scenario = config.quality.scenario
-    entity = "transactions" if scenario == "late_event" else config.quality.entity
+    entity = (
+        "transactions"
+        if scenario == "late_event" or scenario in _SCHEMA_SCENARIOS
+        else config.quality.entity
+    )
     filename = _FILENAMES[entity]
     canonical = tables[filename]
     _validate_canonical_arrivals(tables["transactions.csv"], config)
@@ -106,7 +128,11 @@ def apply_quality_scenario(
         if scenario == "late_event"
         else calculate_affected_count(original_count, config.quality.rate)
     )
-    selected = _select_indices(original_count, calculated, config, scenario)
+    selected = (
+        list(range(original_count))
+        if scenario == "schema_additive_column"
+        else _select_indices(original_count, calculated, config, scenario)
+    )
     field = (
         "ingested_at"
         if scenario == "late_event"
@@ -126,6 +152,9 @@ def apply_quality_scenario(
     elif scenario == "late_event":
         published = _apply_late_events(canonical, selected, config)
         copied[filename] = published
+    elif scenario in _SCHEMA_SCENARIOS:
+        published = _mutate_schema_table(canonical, scenario, selected)
+        copied[filename] = published
     else:
         published = _mutate_table(canonical, scenario, field, selected)
         copied[filename] = published
@@ -141,7 +170,9 @@ def apply_quality_scenario(
         ),
         calculated_count=calculated,
         affected_count=len(selected),
-        expected_violation_count=len(selected),
+        expected_violation_count=(
+            0 if scenario == "schema_additive_column" else len(selected)
+        ),
         expected_violation_type=_VIOLATION_TYPES[scenario],
         original_count=original_count,
         published_count=published.num_rows,
@@ -155,9 +186,60 @@ def apply_quality_scenario(
         minimum_delay_seconds=_delay_extreme(copied["transactions.csv"], min),
         maximum_delay_seconds=_delay_extreme(copied["transactions.csv"], max),
         late_threshold_seconds=config.transactions.ingestion_delay.late_threshold_seconds,
+        observed_columns=tuple(field.name for field in published.schema),
+        expected_columns=tuple(field.name for field in canonical.schema),
+        added_column="source_channel" if scenario == "schema_additive_column" else None,
+        missing_column="merchant_id" if scenario == "schema_missing_column" else None,
+        renamed_from="merchant_id" if scenario == "schema_renamed_column" else None,
+        renamed_to="counterparty_id" if scenario == "schema_renamed_column" else None,
     )
     _validate_scenario_result(tables, result, config)
     return result
+
+
+def _mutate_schema_table(
+    table: pa.Table, scenario: str, selected: list[int]
+) -> pa.Table:
+    records = table.to_pylist()
+    if scenario == "schema_additive_column":
+        for row in records:
+            row["source_channel"] = ("mobile", "web", "branch")[
+                int(row["transaction_id"].split("-")[-1]) % 3
+            ]
+        return pa.Table.from_pylist(records)
+    if scenario == "schema_missing_column":
+        return pa.Table.from_pylist(
+            [
+                {key: value for key, value in row.items() if key != "merchant_id"}
+                for row in records
+            ]
+        )
+    if scenario == "schema_renamed_column":
+        return pa.Table.from_pylist(
+            [
+                {
+                    ("counterparty_id" if key == "merchant_id" else key): value
+                    for key, value in row.items()
+                }
+                for row in records
+            ]
+        )
+    if scenario == "schema_incompatible_value":
+        for index in selected:
+            records[index]["amount"] = f"INVALID_AMOUNT_{records[index]['amount']}"
+        names = [field.name for field in table.schema]
+        arrays = [
+            pa.array([row[name] for row in records], type=field.type)
+            if name != "amount"
+            else pa.array([str(row[name]) for row in records])
+            for name, field in zip(names, table.schema, strict=True)
+        ]
+        return pa.Table.from_arrays(arrays, names=names)
+    if scenario == "schema_unknown_enum":
+        for index in selected:
+            records[index]["status"] = "pending_review"
+        return pa.Table.from_pylist(records, schema=table.schema)
+    raise QualityScenarioError(f"Cenário de qualidade desconhecido: '{scenario}'.")
 
 
 def _apply_late_events(
@@ -262,6 +344,9 @@ def _validate_scenario_result(
     if result.scenario == "late_event":
         validate_late_event_scenario(canonical, published, result, config)
         return
+    if result.scenario in _SCHEMA_SCENARIOS:
+        _validate_schema_mutation(canonical, published, result)
+        return
     original = canonical.to_pylist()
     mutated = published.to_pylist()
     primary_key = _PRIMARY_KEYS[result.target_entity]
@@ -355,3 +440,82 @@ def validate_late_event_scenario(
     }
     if changed_ids != expected_ids:
         _fail("seleção de eventos tardios não é a determinística esperada")
+
+
+def _validate_schema_mutation(
+    canonical: pa.Table, published: pa.Table, result: QualityScenarioResult
+) -> None:
+    expected = [field.name for field in canonical.schema]
+    observed = [field.name for field in published.schema]
+    if result.scenario == "schema_additive_column":
+        if observed != [*expected, "source_channel"]:
+            _fail("colunas observadas não correspondem à adição declarada")
+        if any(
+            row["source_channel"] not in {"mobile", "web", "branch"}
+            for row in published.to_pylist()
+        ):
+            _fail("source_channel contém valor não permitido")
+        for before, after in zip(
+            canonical.to_pylist(), published.to_pylist(), strict=True
+        ):
+            if any(before[name] != after[name] for name in expected):
+                _fail("adição de coluna alterou valores canônicos")
+        return
+    if result.scenario == "schema_missing_column":
+        if observed != [name for name in expected if name != "merchant_id"]:
+            _fail("colunas observadas não correspondem à remoção declarada")
+        for before, after in zip(
+            canonical.to_pylist(), published.to_pylist(), strict=True
+        ):
+            if any(before[key] != after[key] for key in after):
+                _fail("remoção de coluna alterou valores")
+        return
+    if result.scenario == "schema_renamed_column":
+        if observed != [
+            "counterparty_id" if name == "merchant_id" else name for name in expected
+        ]:
+            _fail("colunas observadas não correspondem à renomeação declarada")
+        for before, after in zip(
+            canonical.to_pylist(), published.to_pylist(), strict=True
+        ):
+            if before["merchant_id"] != after["counterparty_id"] or any(
+                before[name] != after[name]
+                for name in expected
+                if name != "merchant_id"
+            ):
+                _fail("renomeação alterou valores")
+        return
+    if observed != expected:
+        _fail("a mutação de valor alterou colunas inesperadamente")
+    canonical_rows = canonical.to_pylist()
+    published_rows = published.to_pylist()
+    changed = [
+        index
+        for index, (before, after) in enumerate(
+            zip(canonical_rows, published_rows, strict=True)
+        )
+        if any(before[key] != after[key] for key in before if key != "amount")
+        or str(before["amount"]) != str(after["amount"])
+    ]
+    if result.scenario == "schema_incompatible_value":
+        if len(changed) != result.calculated_count or any(
+            not str(published_rows[index]["amount"]).startswith("INVALID_AMOUNT_")
+            for index in changed
+        ):
+            _fail("quantidade ou conteúdo da incompatibilidade monetária divergente")
+    elif result.scenario == "schema_unknown_enum":
+        if len(changed) != result.calculated_count or any(
+            {
+                key: canonical_rows[index][key]
+                for key in canonical_rows[index]
+                if key != "status"
+            }
+            != {
+                key: published_rows[index][key]
+                for key in published_rows[index]
+                if key != "status"
+            }
+            or published_rows[index]["status"] != "pending_review"
+            for index in changed
+        ):
+            _fail("quantidade ou conteúdo do enum desconhecido divergente")

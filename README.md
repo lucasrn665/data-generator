@@ -52,10 +52,12 @@ carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.7.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.7.1/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 Use `--scenario` para publicar, separadamente, `duplicate_exact`,
-`duplicate_conflicting`, `required_null`, `orphan_foreign_key` ou `late_event`. Sem a opção,
+`duplicate_conflicting`, `required_null`, `orphan_foreign_key`, `late_event`,
+`schema_additive_column`, `schema_missing_column`, `schema_renamed_column`,
+`schema_incompatible_value` ou `schema_unknown_enum`. Sem a opção,
 o cenário é `valid`. Todos mantêm os mesmos nove CSVs; somente o CSV alvo e o
 manifesto diferem do conjunto canônico.
 

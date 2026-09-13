@@ -171,7 +171,7 @@ def test_failure_in_each_phase_never_exposes_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.7.0"
+        / "schema_version=1.7.1"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -258,7 +258,7 @@ def test_old_layout_coexists_with_new_publication(publication_data: tuple) -> No
 
     assert publication.created is True
     assert marker.read_text(encoding="utf-8") == "old publication"
-    assert "schema_version=1.7.0" in publication.paths.directory.parts
+    assert "schema_version=1.7.1" in publication.paths.directory.parts
 
 
 def test_ledger_write_failure_does_not_publish_final_directory(
@@ -282,7 +282,7 @@ def test_ledger_write_failure_does_not_publish_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.7.0"
+        / "schema_version=1.7.1"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -312,7 +312,7 @@ def test_transfer_write_failure_does_not_publish_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.7.0"
+        / "schema_version=1.7.1"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -342,7 +342,7 @@ def test_label_write_failure_does_not_publish_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.7.0"
+        / "schema_version=1.7.1"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -394,7 +394,7 @@ def test_rejects_preexisting_directory_without_manifest(
     final = (
         root
         / "exports"
-        / "schema_version=1.7.0"
+        / "schema_version=1.7.1"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
