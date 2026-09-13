@@ -112,6 +112,17 @@ incorreto e conflito com uma publicação divergente são os problemas mais
 comuns. O Databricks consumirá os CSVs em etapa futura; esta etapa não
 implementa Spark, Event Hubs, Parquet ou código Databricks.
 
+### Arquivo `.env`
+
+A CLI carrega `.env` (ou o caminho informado por `--env-file`) antes da
+configuração, sem substituir variáveis já definidas no processo. Um `.env`
+ausente por padrão é permitido; um caminho explicitamente informado deve
+existir. O arquivo é ignorado pelo Git; use
+ [`.env.example`](.env.example) como referência. `DefaultAzureCredential`
+ pode usar `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` e `AZURE_CLIENT_SECRET` para
+service principal. Senhas de usuário, connection strings, SAS e account keys
+nunca são aceitos nem registrados.
+
 ## Documentação
 
 - [Modelo de domínio](docs/domain-model.md)

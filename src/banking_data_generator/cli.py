@@ -10,6 +10,7 @@ import pyarrow as pa
 
 from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import ConfigError, load_config
+from banking_data_generator.env import EnvFileError, load_environment_file
 from banking_data_generator.export import (
     AzureAdlsDestination,
     AzureEventHubsDestination,
@@ -83,6 +84,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="caminho do arquivo YAML de configuração",
     )
     parser.add_argument(
+        "--env-file",
+        type=Path,
+        default=None,
+        help="arquivo dotenv (padrão: .env; ausente por padrão é permitido)",
+    )
+    parser.add_argument(
         "--scenario",
         choices=_SCENARIOS,
         default="valid",
@@ -102,6 +109,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = build_parser().parse_args(argv)
     try:
         project_root = arguments.project_root.resolve()
+        env_path = arguments.env_file or (project_root / ".env")
+        if not env_path.is_absolute():
+            env_path = project_root / env_path
+        load_environment_file(env_path, required=arguments.env_file is not None)
         if not project_root.is_dir():
             raise CliInputError(
                 f"A raiz do projeto não existe ou não é diretório: '{project_root}'."
@@ -153,6 +164,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         UnsafeOutputPath,
         RemotePublicationError,
         EventHubsPublicationError,
+        EnvFileError,
         OSError,
         pa.ArrowException,
     ) as error:

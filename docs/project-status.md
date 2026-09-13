@@ -121,6 +121,8 @@ Consulte o [modelo de domínio](domain-model.md), as
 - Contrato batch `1.7.3`, gerador `0.12.0` e schema de eventos `1.0.0`, com
   replay opcional de eventos financeiros no Azure Event Hubs, envelopes JSON
   determinísticos e batching; a entrega é at-least-once.
+- A CLI aceita `.env` opcional (ou `--env-file`) com precedência das variáveis
+  do processo; credenciais são consumidas apenas pelo `DefaultAzureCredential`.
 
 ## Testes e validações disponíveis
 
