@@ -59,6 +59,9 @@ Consulte o [modelo de domínio](domain-model.md), as
   próprio em caso de falha.
 - Resolução do diretório de saída pela raiz do projeto e rejeição de caminhos
   absolutos, travessias, escapes e destinos dentro de `src/` ou `.git/`.
+- Pipeline batch para carregar, gerar, validar e exportar o conjunto atual.
+- CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
+  erros esperados.
 
 ## Testes e validações disponíveis
 
@@ -71,7 +74,9 @@ Consulte o [modelo de domínio](domain-model.md), as
   datas, tipos de conta, saldos de abertura e compatibilidade PyArrow.
 - Conversão e round-trip CSV, escaping, UTF-8, cabeçalhos, ordem, datas,
   decimais, idempotência, atomicidade e segurança de caminhos.
-- pytest: 57 testes passando na execução atual com Python 3.14.4.
+- Pipeline completo, validação antes da escrita, determinismo, resumo da CLI,
+  códigos de saída, erros conhecidos e preservação do diretório atual.
+- pytest: 69 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
@@ -80,15 +85,15 @@ Consulte o [modelo de domínio](domain-model.md), as
 
 - Cartões, estabelecimentos, transações, transferências, ledger e saldos atuais
   ainda não foram implementados.
-- Ainda não existem CLI ou schemas PyArrow para entidades futuras.
+- Ainda não existem schemas PyArrow para entidades futuras.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir o próximo incremento antes de implementar novas entidades. Uma camada
-de orquestração ou cartões são candidatos naturais; eventos financeiros,
-ledger e saldo atual permanecem fora da etapa concluída.
+Definir o próximo incremento antes de implementar novas entidades. Cartões são
+um candidato natural; eventos financeiros, ledger e saldo atual permanecem
+fora da etapa concluída.
 
 ## Comandos principais
 
@@ -116,4 +121,4 @@ python -c "import banking_data_generator as b; print(b.installation_status())"
 python -c "from banking_data_generator.config import load_config; print(load_config('configs/default.yaml'))"
 ```
 
-Ainda não existe uma CLI para gerar dados.
+A CLI executa o pipeline batch atual com `python -m banking_data_generator`.

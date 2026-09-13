@@ -35,6 +35,19 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
+## Execução batch
+
+Execute o pipeline completo a partir da raiz do projeto:
+
+```bash
+python -m banking_data_generator --config configs/default.yaml
+```
+
+Use `--project-root` quando a raiz desejada não for o diretório atual. A CLI
+carrega a configuração, gera e valida os dados e escreve `customers.csv`,
+`addresses.csv` e `accounts.csv` no diretório particionado por data de
+referência, seed e cenário `valid`.
+
 ## Configuração
 
 [`configs/default.yaml`](configs/default.yaml) reserva os parâmetros comuns do
@@ -50,6 +63,6 @@ referência e seed. Toda geração recebe uma seed.
 
 ## Estado atual
 
-Clientes, endereços, contas, schemas PyArrow e escrita batch CSV estão
-implementados. Cartões, estabelecimentos, movimentações, ledger, saldo atual e
-CLI permanecem fora do escopo atual.
+Clientes, endereços, contas, schemas PyArrow, escrita batch CSV, pipeline e CLI
+estão implementados. Cartões, estabelecimentos, movimentações, ledger e saldo
+atual permanecem fora do escopo atual.
