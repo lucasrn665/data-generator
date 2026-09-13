@@ -1,6 +1,6 @@
 """Publicação opcional de envelopes no Azure Event Hubs."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import Protocol
@@ -39,6 +39,7 @@ class AzureEventHubsDestination:
         self,
         events: Sequence[EventEnvelope],
         config: EventHubsConfig | None = None,
+        progress: Callable[[str], None] | None = None,
     ) -> EventHubsPublicationResult:
         config = config or self._config
         if config is None:
@@ -75,6 +76,7 @@ class AzureEventHubsDestination:
                         producer.send_batch(batch)
                         sent += batch_count
                         batches += 1
+                        _report_progress(progress, sent, len(events))
                     batch = producer.create_batch(partition_key=event.partition_key)
                     batch_key = event.partition_key
                     batch_count = 0
@@ -86,6 +88,7 @@ class AzureEventHubsDestination:
                     producer.send_batch(batch)
                     sent += batch_count
                     batches += 1
+                    _report_progress(progress, sent, len(events))
                     batch = producer.create_batch(partition_key=event.partition_key)
                     batch_count = 0
                     if not _try_add(batch, EventData(event.to_bytes())):
@@ -97,6 +100,7 @@ class AzureEventHubsDestination:
                 producer.send_batch(batch)
                 sent += batch_count
                 batches += 1
+                _report_progress(progress, sent, len(events))
         except KeyboardInterrupt:
             interrupted = True
         except Exception as error:
@@ -122,6 +126,16 @@ class AzureEventHubsDestination:
             duration_seconds=monotonic() - start,
             interrupted=interrupted,
         )
+
+
+def _report_progress(
+    progress: Callable[[str], None] | None, sent: int, total: int
+) -> None:
+    if progress is None or total == 0:
+        return
+    step = max(1, min(5000, (total + 9) // 10))
+    if sent == total or sent % step == 0:
+        progress(f"📤 Eventos enviados: {sent}/{total}")
 
 
 def _try_add(batch: object, event_data: object) -> bool:

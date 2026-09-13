@@ -1,5 +1,6 @@
 """Publicação opcional e segura de um conjunto batch no ADLS Gen2."""
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from hashlib import sha256
@@ -29,7 +30,11 @@ class RemotePublicationResult:
 
 class RemoteBatchDestination(Protocol):
     def publish(
-        self, local_directory: Path, relative_directory: str, overwrite: bool = False
+        self,
+        local_directory: Path,
+        relative_directory: str,
+        overwrite: bool = False,
+        progress: Callable[[str], None] | None = None,
     ) -> RemotePublicationResult: ...
 
 
@@ -47,7 +52,11 @@ class AzureAdlsDestination:
         self.config = config
 
     def publish(
-        self, local_directory: Path, relative_directory: str, overwrite: bool = False
+        self,
+        local_directory: Path,
+        relative_directory: str,
+        overwrite: bool = False,
+        progress: Callable[[str], None] | None = None,
     ) -> RemotePublicationResult:
         manifest = validate_local_publication(local_directory)
         credential = None
@@ -92,15 +101,23 @@ class AzureAdlsDestination:
             filenames = sorted(manifest["files"])
             started = monotonic()
             _upload_csv_files(
-                directory, local_directory, filenames, self.config.max_concurrency
+                directory,
+                local_directory,
+                filenames,
+                self.config.max_concurrency,
+                progress,
             )
             phase_durations["upload"] = monotonic() - started
             _upload_file(directory, "manifest.json", local_directory / "manifest.json")
             started = monotonic()
+            if progress:
+                progress("🔎 Validando arquivos remotos...")
             if not _remote_matches(filesystem, staging, manifest):
                 raise RemotePublicationError("validação remota do staging falhou")
             phase_durations["validation"] = monotonic() - started
             started = monotonic()
+            if progress:
+                progress("🚀 Promovendo publicação...")
             directory.rename_directory(new_name=f"{self.config.file_system}/{final}")
             phase_durations["promotion"] = monotonic() - started
             return RemotePublicationResult(
@@ -176,7 +193,11 @@ def _upload_file(directory: object, filename: str, local: Path) -> None:
 
 
 def _upload_csv_files(
-    directory: object, local_directory: Path, filenames: list[str], max_workers: int
+    directory: object,
+    local_directory: Path,
+    filenames: list[str],
+    max_workers: int,
+    progress: Callable[[str], None] | None = None,
 ) -> None:
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
@@ -185,6 +206,7 @@ def _upload_csv_files(
             ): filename
             for filename in filenames
         }
+        completed = 0
         for future in as_completed(futures):
             try:
                 future.result()
@@ -192,6 +214,9 @@ def _upload_csv_files(
                 for pending in futures:
                     pending.cancel()
                 raise
+            completed += 1
+            if progress:
+                progress(f"⬆️ Enviando arquivos: {completed}/{len(filenames)}")
 
 
 def _directory_exists(filesystem: object, path: str) -> bool:

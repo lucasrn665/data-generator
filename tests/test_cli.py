@@ -64,7 +64,8 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert exit_code == 0
     assert Path.cwd() == original_cwd
     captured = capsys.readouterr()
-    assert captured.err == ""
+    assert "🔧 Carregando configuração" in captured.err
+    assert "✅ Publicação local concluída" in captured.err
     assert "status: sucesso" in captured.out
     assert "seed: 42" in captured.out
     assert "data de referência: 2026-01-01" in captured.out
