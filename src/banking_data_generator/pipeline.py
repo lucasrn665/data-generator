@@ -24,8 +24,11 @@ from banking_data_generator.export import write_batch_csv
 from banking_data_generator.generation import (
     generate_accounts,
     generate_addresses,
+    generate_cards,
     generate_customers,
+    generate_merchants,
 )
+from banking_data_generator.validation import validate_cards_and_merchants
 
 
 class DatasetValidationError(ValueError):
@@ -40,11 +43,15 @@ class BatchPipelineResult:
     customers_file: Path
     addresses_file: Path
     accounts_file: Path
+    cards_file: Path
+    merchants_file: Path
     ledger_entries_file: Path
     manifest_file: Path
     customer_count: int
     address_count: int
     account_count: int
+    card_count: int
+    merchant_count: int
     ledger_entry_count: int
     opening_credit_total: Decimal
     seed: int
@@ -62,8 +69,11 @@ def run_batch_pipeline(
     customers = generate_customers(config)
     addresses = generate_addresses(customers, config)
     accounts = generate_accounts(customers, config)
+    merchants = generate_merchants(config)
+    cards = generate_cards(accounts, config)
 
     validate_dataset(config, customers, addresses, accounts)
+    validate_cards_and_merchants(config, accounts, cards, merchants)
     ledger_entries = generate_opening_entries(accounts)
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
@@ -83,6 +93,8 @@ def run_batch_pipeline(
         addresses,
         accounts,
         ledger_entries,
+        cards=cards,
+        merchants=merchants,
         project_root=project_root,
     )
     return BatchPipelineResult(
@@ -90,11 +102,15 @@ def run_batch_pipeline(
         customers_file=publication.paths.customers,
         addresses_file=publication.paths.addresses,
         accounts_file=publication.paths.accounts,
+        cards_file=publication.paths.cards,
+        merchants_file=publication.paths.merchants,
         ledger_entries_file=publication.paths.ledger_entries,
         manifest_file=publication.paths.manifest,
         customer_count=len(customers),
         address_count=len(addresses),
         account_count=len(accounts),
+        card_count=len(cards),
+        merchant_count=len(merchants),
         ledger_entry_count=len(ledger_entries),
         opening_credit_total=opening_credit_total,
         seed=config.seed,

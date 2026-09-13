@@ -15,6 +15,7 @@ from banking_data_generator.pipeline import (
     DatasetValidationError,
     run_batch_pipeline,
 )
+from banking_data_generator.validation import ExtendedDomainValidationError
 
 
 class CliInputError(ValueError):
@@ -25,9 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Construa o parser público da linha de comando."""
     parser = argparse.ArgumentParser(
         prog="python -m banking_data_generator",
-        description=(
-            "Gera clientes, endereços, contas e ledger sintéticos em quatro CSVs."
-        ),
+        description=("Gera o domínio bancário sintético atual em seis arquivos CSV."),
     )
     parser.add_argument(
         "--config",
@@ -63,6 +62,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         AccountingError,
         ConfigError,
         DatasetValidationError,
+        ExtendedDomainValidationError,
         ManifestValidationError,
         UnsafeOutputPath,
         OSError,
@@ -83,6 +83,8 @@ def print_success_summary(result: BatchPipelineResult) -> None:
     print(f"clientes: {result.customer_count}")
     print(f"endereços: {result.address_count}")
     print(f"contas: {result.account_count}")
+    print(f"cartões: {result.card_count}")
+    print(f"estabelecimentos: {result.merchant_count}")
     print(f"lançamentos: {result.ledger_entry_count}")
     print(f"créditos de abertura: {result.opening_credit_total:.2f} BRL")
     print(f"versão do gerador: {result.generator_version}")
@@ -95,6 +97,8 @@ def print_success_summary(result: BatchPipelineResult) -> None:
         f"{result.customers_file.name}, "
         f"{result.addresses_file.name}, "
         f"{result.accounts_file.name}, "
+        f"{result.cards_file.name}, "
+        f"{result.merchants_file.name}, "
         f"{result.ledger_entries_file.name}, "
         f"{result.manifest_file.name}"
     )

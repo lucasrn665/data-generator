@@ -8,6 +8,7 @@ import banking_data_generator.pipeline as pipeline_module
 from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import BankingDataGeneratorConfig, load_config
 from banking_data_generator.pipeline import DatasetValidationError, run_batch_pipeline
+from banking_data_generator.validation import ExtendedDomainValidationError
 
 DEFAULT_CONFIG = Path(__file__).parents[1] / "configs" / "default.yaml"
 
@@ -36,7 +37,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.1.0"
+        / "schema_version=1.2.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -45,16 +46,22 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.addresses_file.is_file()
     assert result.accounts_file.is_file()
     assert result.ledger_entries_file.is_file()
+    assert result.cards_file.is_file()
+    assert result.merchants_file.is_file()
     assert result.manifest_file.is_file()
     assert result.ledger_entry_count == result.account_count
     assert result.opening_credit_total > Decimal("0.00")
-    assert result.generator_version == "0.2.0"
-    assert result.schema_version == "1.1.0"
+    assert result.card_count == result.account_count * pipeline_config.cards.per_account
+    assert result.merchant_count == pipeline_config.merchants.count
+    assert result.generator_version == "0.3.0"
+    assert result.schema_version == "1.2.0"
     assert result.created is True
     assert {path.name for path in result.output_directory.iterdir()} == {
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "cards.csv",
+        "merchants.csv",
         "ledger_entries.csv",
         "manifest.json",
     }
@@ -111,6 +118,19 @@ def test_reconciliation_failure_happens_before_publication(
     )
 
     with pytest.raises(AccountingError, match="simulated reconciliation failure"):
+        run_batch_pipeline(pipeline_config, tmp_path)
+
+    assert not (tmp_path / "output").exists()
+
+
+def test_invalid_card_stops_pipeline_before_publication(
+    tmp_path: Path,
+    pipeline_config: BankingDataGeneratorConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(pipeline_module, "generate_cards", lambda *_: [])
+
+    with pytest.raises(ExtendedDomainValidationError, match="quantidade de cartões"):
         run_batch_pipeline(pipeline_config, tmp_path)
 
     assert not (tmp_path / "output").exists()

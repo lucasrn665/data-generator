@@ -10,8 +10,10 @@ from banking_data_generator.config import BankingDataGeneratorConfig, load_confi
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
     ADDRESS_SCHEMA,
+    CARD_SCHEMA,
     CUSTOMER_SCHEMA,
     LEDGER_ENTRY_SCHEMA,
+    MERCHANT_SCHEMA,
 )
 from banking_data_generator.export import UnsafeOutputPath, write_batch_csv
 from banking_data_generator.export.paths import build_batch_csv_paths
@@ -59,7 +61,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
     expected_directory = (
         root
         / "exports"
-        / "schema_version=1.1.0"
+        / "schema_version=1.2.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -71,12 +73,16 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
             paths.customers,
             paths.addresses,
             paths.accounts,
+            paths.cards,
+            paths.merchants,
             paths.ledger_entries,
         )
     } == {
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "cards.csv",
+        "merchants.csv",
         "ledger_entries.csv",
     }
     for path, schema, records in (
@@ -186,16 +192,33 @@ def test_csv_files_can_be_read_back_with_valid_foreign_keys(
         paths.ledger_entries,
         convert_options=pa_csv.ConvertOptions(column_types=LEDGER_ENTRY_SCHEMA),
     )
+    card_table = pa_csv.read_csv(
+        paths.cards,
+        convert_options=pa_csv.ConvertOptions(column_types=CARD_SCHEMA),
+    )
+    merchant_table = pa_csv.read_csv(
+        paths.merchants,
+        convert_options=pa_csv.ConvertOptions(column_types=MERCHANT_SCHEMA),
+    )
     customer_ids = set(customer_table["customer_id"].to_pylist())
 
     assert customer_table.num_rows == len(customers)
     assert address_table.num_rows == len(addresses)
     assert account_table.num_rows == len(accounts)
     assert ledger_table.num_rows == len(accounts)
+    assert card_table.num_rows == len(accounts) * config.cards.per_account
+    assert merchant_table.num_rows == config.merchants.count
     assert set(address_table["customer_id"].to_pylist()) <= customer_ids
     assert set(account_table["customer_id"].to_pylist()) <= customer_ids
     assert set(ledger_table["account_id"].to_pylist()) <= set(
         account_table["account_id"].to_pylist()
+    )
+    assert set(card_table["account_id"].to_pylist()) <= set(
+        account_table["account_id"].to_pylist()
+    )
+    assert all(
+        isinstance(value, Decimal)
+        for value in card_table["daily_purchase_limit"].to_pylist()
     )
     assert all(
         value.tzinfo is not None for value in ledger_table["effective_at"].to_pylist()

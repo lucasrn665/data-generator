@@ -4,8 +4,11 @@ from banking_data_generator.config.loader import ConfigError, load_config
 from banking_data_generator.config.models import (
     AccountsConfig,
     BankingDataGeneratorConfig,
+    CardsConfig,
     CustomersConfig,
+    DailyPurchaseLimitConfig,
     InitialBalanceConfig,
+    MerchantsConfig,
     OutputConfig,
     TransactionsConfig,
 )
@@ -13,9 +16,12 @@ from banking_data_generator.config.models import (
 __all__ = [
     "AccountsConfig",
     "BankingDataGeneratorConfig",
+    "CardsConfig",
     "ConfigError",
     "CustomersConfig",
+    "DailyPurchaseLimitConfig",
     "InitialBalanceConfig",
+    "MerchantsConfig",
     "OutputConfig",
     "TransactionsConfig",
     "load_config",

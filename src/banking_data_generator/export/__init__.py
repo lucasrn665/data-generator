@@ -9,8 +9,10 @@ from banking_data_generator.export.paths import BatchCsvPaths, UnsafeOutputPath
 from banking_data_generator.export.tables import (
     accounts_to_table,
     addresses_to_table,
+    cards_to_table,
     customers_to_table,
     ledger_entries_to_table,
+    merchants_to_table,
 )
 
 __all__ = [
@@ -20,7 +22,9 @@ __all__ = [
     "UnsafeOutputPath",
     "accounts_to_table",
     "addresses_to_table",
+    "cards_to_table",
     "customers_to_table",
     "ledger_entries_to_table",
+    "merchants_to_table",
     "write_batch_csv",
 ]

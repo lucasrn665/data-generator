@@ -11,8 +11,11 @@ import yaml
 from banking_data_generator.config.models import (
     AccountsConfig,
     BankingDataGeneratorConfig,
+    CardsConfig,
     CustomersConfig,
+    DailyPurchaseLimitConfig,
     InitialBalanceConfig,
+    MerchantsConfig,
     OutputConfig,
     TransactionsConfig,
 )
@@ -24,12 +27,17 @@ _ROOT_FIELDS = {
     "output",
     "customers",
     "accounts",
+    "merchants",
+    "cards",
     "transactions",
 }
 _OUTPUT_FIELDS = {"directory", "format"}
 _CUSTOMERS_FIELDS = {"count"}
 _ACCOUNTS_FIELDS = {"min_per_customer", "max_per_customer", "initial_balance"}
 _INITIAL_BALANCE_FIELDS = {"min", "max"}
+_MERCHANTS_FIELDS = {"count"}
+_CARDS_FIELDS = {"per_account", "daily_purchase_limit", "initially_blocked_rate"}
+_DAILY_PURCHASE_LIMIT_FIELDS = {"min", "max"}
 _TRANSACTIONS_FIELDS = {
     "count",
     "fraud_rate_overall",
@@ -66,6 +74,8 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     output = _mapping(root["output"], "output")
     customers = _mapping(root["customers"], "customers")
     accounts = _mapping(root["accounts"], "accounts")
+    merchants = _mapping(root["merchants"], "merchants")
+    cards = _mapping(root["cards"], "cards")
     transactions = _mapping(root["transactions"], "transactions")
 
     _validate_fields(output, _OUTPUT_FIELDS, "output")
@@ -78,6 +88,12 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         "accounts.initial_balance",
     )
     _validate_fields(transactions, _TRANSACTIONS_FIELDS, "transactions")
+    _validate_fields(merchants, _MERCHANTS_FIELDS, "merchants")
+    _validate_fields(cards, _CARDS_FIELDS, "cards")
+    daily_limit = _mapping(cards["daily_purchase_limit"], "cards.daily_purchase_limit")
+    _validate_fields(
+        daily_limit, _DAILY_PURCHASE_LIMIT_FIELDS, "cards.daily_purchase_limit"
+    )
 
     minimum_balance = _money(initial_balance["min"], "accounts.initial_balance.min")
     maximum_balance = _money(initial_balance["max"], "accounts.initial_balance.max")
@@ -87,6 +103,16 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         "accounts.initial_balance.min",
         "accounts.initial_balance.max",
     )
+    minimum_daily_limit = _money(daily_limit["min"], "cards.daily_purchase_limit.min")
+    maximum_daily_limit = _money(daily_limit["max"], "cards.daily_purchase_limit.max")
+    _validate_order(
+        minimum_daily_limit,
+        maximum_daily_limit,
+        "cards.daily_purchase_limit.min",
+        "cards.daily_purchase_limit.max",
+    )
+    if minimum_daily_limit <= _ZERO:
+        _fail("cards.daily_purchase_limit.min", "deve ser maior que 0.00")
 
     minimum_accounts = _positive_int(
         accounts["min_per_customer"], "accounts.min_per_customer"
@@ -118,6 +144,19 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
             initial_balance=InitialBalanceConfig(
                 min=minimum_balance,
                 max=maximum_balance,
+            ),
+        ),
+        merchants=MerchantsConfig(
+            count=_non_negative_int(merchants["count"], "merchants.count")
+        ),
+        cards=CardsConfig(
+            per_account=_positive_int(cards["per_account"], "cards.per_account"),
+            daily_purchase_limit=DailyPurchaseLimitConfig(
+                min=minimum_daily_limit,
+                max=maximum_daily_limit,
+            ),
+            initially_blocked_rate=_rate(
+                cards["initially_blocked_rate"], "cards.initially_blocked_rate"
             ),
         ),
         transactions=TransactionsConfig(

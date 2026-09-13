@@ -39,6 +39,30 @@ class AccountsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class MerchantsConfig:
+    """Parâmetros da geração de estabelecimentos sintéticos."""
+
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class DailyPurchaseLimitConfig:
+    """Intervalo permitido para o limite diário dos cartões."""
+
+    min: Decimal
+    max: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class CardsConfig:
+    """Parâmetros da geração de cartões de débito sintéticos."""
+
+    per_account: int
+    daily_purchase_limit: DailyPurchaseLimitConfig
+    initially_blocked_rate: Decimal
+
+
+@dataclass(frozen=True, slots=True)
 class TransactionsConfig:
     """Parâmetros para a futura geração de transações."""
 
@@ -59,4 +83,6 @@ class BankingDataGeneratorConfig:
     output: OutputConfig
     customers: CustomersConfig
     accounts: AccountsConfig
+    merchants: MerchantsConfig
+    cards: CardsConfig
     transactions: TransactionsConfig

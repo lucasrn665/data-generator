@@ -16,6 +16,8 @@ CSV_ENTITY_FILES = {
     "accounts": "accounts.csv",
     "addresses": "addresses.csv",
     "customers": "customers.csv",
+    "cards": "cards.csv",
+    "merchants": "merchants.csv",
     "ledger_entries": "ledger_entries.csv",
 }
 MANAGED_FILENAMES = frozenset({*CSV_ENTITY_FILES.values(), "manifest.json"})
@@ -30,6 +32,7 @@ def build_manifest(
     directory: Path,
     record_counts: Mapping[str, int],
     accounting_invariants: Mapping[str, int | str],
+    domain_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Construa o manifesto a partir dos CSVs já escritos e validados."""
     files = {
@@ -44,6 +47,7 @@ def build_manifest(
     return {
         "accounting_invariants": dict(accounting_invariants),
         "currency": config.currency,
+        "domain_summary": dict(domain_summary),
         "expected_violation_count": 0,
         "files": files,
         "generator_version": GENERATOR_VERSION,
@@ -57,6 +61,15 @@ def build_manifest(
                 "min_per_customer": config.accounts.min_per_customer,
             },
             "customers": {"count": config.customers.count},
+            "cards": {
+                "per_account": config.cards.per_account,
+                "daily_purchase_limit": {
+                    "min": str(config.cards.daily_purchase_limit.min),
+                    "max": str(config.cards.daily_purchase_limit.max),
+                },
+                "initially_blocked_rate": str(config.cards.initially_blocked_rate),
+            },
+            "merchants": {"count": config.merchants.count},
             "output_format": config.output.format,
         },
         "quality_scenarios": [],
@@ -74,7 +87,7 @@ def serialize_manifest(manifest: Mapping[str, Any]) -> bytes:
 
 
 def validate_csv_files(directory: Path, manifest: Mapping[str, Any]) -> None:
-    """Valide presença, contagem, tamanho e checksum dos quatro CSVs."""
+    """Valide presença, contagem, tamanho e checksum dos seis CSVs."""
     files = manifest.get("files")
     if not isinstance(files, dict):
         _fail("a propriedade 'files' é inválida")
@@ -126,7 +139,7 @@ def validate_existing_publication(
         _fail(f"o destino existente '{directory.name}' não é um diretório")
     actual_names = {path.name for path in directory.iterdir()}
     if actual_names != MANAGED_FILENAMES:
-        _fail("o diretório final não contém exatamente os cinco arquivos esperados")
+        _fail("o diretório final não contém exatamente os sete arquivos esperados")
 
     manifest_path = directory / "manifest.json"
     existing_manifest = load_manifest(manifest_path)

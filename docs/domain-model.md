@@ -1,7 +1,8 @@
 # Modelo de domínio
 
-Este documento delimita o modelo do gerador. Clientes, endereços e contas estão
-implementados; as demais entidades permanecem planejadas.
+Este documento delimita o modelo do gerador. Clientes, endereços, contas,
+cartões de débito, estabelecimentos e o ledger de abertura estão implementados;
+as demais entidades permanecem planejadas.
 
 ## Entidades previstas
 
@@ -14,10 +15,11 @@ implementados; as demais entidades permanecem planejadas.
   saldo é derivado exclusivamente do ledger.
 - **Lançamento de ledger**: registro imutável de crédito ou débito associado a
   uma conta. Nesta etapa, existe exatamente um crédito de abertura por conta.
-- **Cartão**: instrumento sintético associado a uma conta, sem reproduzir
-  números de cartões reais. A primeira versão terá somente cartões de débito;
-  cartões de crédito pertencem ao roadmap futuro.
-- **Estabelecimento**: recebedor sintético de pagamentos.
+- **Cartão**: instrumento sintético associado diretamente a uma conta, sem PAN,
+  CVV, senha, trilha ou número bancário. O tipo atual é exclusivamente `debit`.
+- **Estabelecimento**: recebedor sintético, sem CNPJ ou identificador oficial.
+  As categorias fechadas são `grocery`, `restaurant`, `pharmacy`, `fuel` e
+  `retail`, pareadas respectivamente a códigos sintéticos `SYN-MCC-*`.
 - **Transação**: tentativa de movimentação financeira, aprovada ou recusada.
 - **Transferência**: movimentação consistente entre uma conta de origem e uma
   conta de destino.
@@ -32,12 +34,14 @@ não será configurável agora.
 
 Cada cliente terá entre `accounts.min_per_customer` e
 `accounts.max_per_customer` contas e deverá possuir pelo menos uma. Cada conta
-pertencerá a exatamente um cliente. Uma conta poderá possuir cartões,
-transações, transferências e saldos. Estornos deverão referenciar uma transação
-anterior. Clientes, endereços e contas possuem schemas PyArrow explícitos; os
-lançamentos também possuem schema explícito e são publicados em
-`ledger_entries.csv`. Os
-schemas das demais entidades serão definidos antes de suas implementações.
+pertencerá a exatamente um cliente. Cada conta possui a quantidade configurada
+de cartões de débito, e cada cartão pertence exatamente a uma conta. Uma conta
+poderá possuir transações, transferências e saldos. Estornos deverão referenciar
+uma transação anterior. Clientes, endereços e contas possuem schemas PyArrow
+explícitos; os lançamentos também possuem schema explícito e são publicados em
+`ledger_entries.csv`. Cartões e estabelecimentos são publicados em `cards.csv`
+e `merchants.csv`. Os schemas das demais entidades serão definidos antes de
+suas implementações.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por
 seed e incapazes de representar deliberadamente pessoas ou instrumentos reais.

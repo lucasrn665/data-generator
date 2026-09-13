@@ -55,3 +55,31 @@ LEDGER_ENTRY_SCHEMA = pa.schema(
         pa.field("sequence_number", pa.int64(), nullable=False),
     ]
 )
+
+MERCHANT_SCHEMA = pa.schema(
+    [
+        pa.field("merchant_id", pa.string(), nullable=False),
+        pa.field("synthetic_name", pa.string(), nullable=False),
+        pa.field("category", pa.string(), nullable=False),
+        pa.field("category_code", pa.string(), nullable=False),
+        pa.field("city", pa.string(), nullable=False),
+        pa.field("state", pa.string(), nullable=False),
+        pa.field("country", pa.string(), nullable=False),
+        pa.field("risk_profile", pa.string(), nullable=False),
+        pa.field("created_date", pa.date32(), nullable=False),
+        pa.field("status", pa.string(), nullable=False),
+    ]
+)
+
+CARD_SCHEMA = pa.schema(
+    [
+        pa.field("card_id", pa.string(), nullable=False),
+        pa.field("account_id", pa.string(), nullable=False),
+        pa.field("card_type", pa.string(), nullable=False),
+        pa.field("status", pa.string(), nullable=False),
+        pa.field("issued_date", pa.date32(), nullable=False),
+        pa.field("expiration_date", pa.date32(), nullable=False),
+        pa.field("daily_purchase_limit", pa.decimal128(18, 2), nullable=False),
+        pa.field("currency", pa.string(), nullable=False),
+    ]
+)

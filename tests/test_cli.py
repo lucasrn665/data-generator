@@ -26,7 +26,7 @@ def test_help_is_clear_and_successful(capsys: pytest.CaptureFixture[str]) -> Non
     output = capsys.readouterr().out
     assert "--config" in output
     assert "--project-root" in output
-    assert "clientes, endereços, contas e ledger" in output
+    assert "seis arquivos CSV" in output
 
 
 def test_missing_required_argument_returns_argparse_error(
@@ -62,16 +62,18 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "endereços: 4" in captured.out
     assert "lançamentos:" in captured.out
     assert "créditos de abertura:" in captured.out
-    assert "versão do gerador: 0.2.0" in captured.out
-    assert "versão do schema: 1.1.0" in captured.out
+    assert "cartões:" in captured.out
+    assert "estabelecimentos:" in captured.out
+    assert "versão do gerador: 0.3.0" in captured.out
+    assert "versão do schema: 1.2.0" in captured.out
     assert "publicação: criada" in captured.out
-    assert "ledger_entries.csv, manifest.json" in captured.out
+    assert "cards.csv, merchants.csv, ledger_entries.csv, manifest.json" in captured.out
     assert "SYN-CUS-" not in captured.out
 
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.1.0"
+        / "schema_version=1.2.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -80,6 +82,8 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "cards.csv",
+        "merchants.csv",
         "ledger_entries.csv",
     }
     assert (directory / "manifest.json").is_file()

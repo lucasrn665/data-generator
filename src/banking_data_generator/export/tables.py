@@ -4,12 +4,21 @@ from collections.abc import Sequence
 
 import pyarrow as pa
 
-from banking_data_generator.domain.models import Account, Address, Customer, LedgerEntry
+from banking_data_generator.domain.models import (
+    Account,
+    Address,
+    Customer,
+    DebitCard,
+    LedgerEntry,
+    Merchant,
+)
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
     ADDRESS_SCHEMA,
+    CARD_SCHEMA,
     CUSTOMER_SCHEMA,
     LEDGER_ENTRY_SCHEMA,
+    MERCHANT_SCHEMA,
 )
 
 
@@ -85,3 +94,41 @@ def ledger_entries_to_table(entries: Sequence[LedgerEntry]) -> pa.Table:
         for entry in entries
     ]
     return pa.Table.from_pylist(records, schema=LEDGER_ENTRY_SCHEMA)
+
+
+def cards_to_table(cards: Sequence[DebitCard]) -> pa.Table:
+    """Converta cartões sem introduzir números ou credenciais bancárias."""
+    records = [
+        {
+            "card_id": card.card_id,
+            "account_id": card.account_id,
+            "card_type": card.card_type.value,
+            "status": card.status.value,
+            "issued_date": card.issued_date,
+            "expiration_date": card.expiration_date,
+            "daily_purchase_limit": card.daily_purchase_limit,
+            "currency": card.currency,
+        }
+        for card in cards
+    ]
+    return pa.Table.from_pylist(records, schema=CARD_SCHEMA)
+
+
+def merchants_to_table(merchants: Sequence[Merchant]) -> pa.Table:
+    """Converta estabelecimentos na ordem do contrato batch."""
+    records = [
+        {
+            "merchant_id": merchant.merchant_id,
+            "synthetic_name": merchant.synthetic_name,
+            "category": merchant.category.value,
+            "category_code": merchant.category_code,
+            "city": merchant.city,
+            "state": merchant.state,
+            "country": merchant.country,
+            "risk_profile": merchant.risk_profile.value,
+            "created_date": merchant.created_date,
+            "status": merchant.status.value,
+        }
+        for merchant in merchants
+    ]
+    return pa.Table.from_pylist(records, schema=MERCHANT_SCHEMA)

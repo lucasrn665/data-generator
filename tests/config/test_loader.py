@@ -33,6 +33,11 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.output.format == "csv"
     assert config.accounts.initial_balance.min == Decimal("100.00")
     assert config.accounts.initial_balance.max == Decimal("50000.00")
+    assert config.merchants.count == 500
+    assert config.cards.per_account == 1
+    assert config.cards.daily_purchase_limit.min == Decimal("100.00")
+    assert config.cards.daily_purchase_limit.max == Decimal("5000.00")
+    assert config.cards.initially_blocked_rate == Decimal("0.05")
     assert config.transactions.fraud_rate_overall == Decimal("0.005")
 
 
@@ -97,6 +102,8 @@ def test_rejects_empty_output_directory(
             "propriedades obrigatórias ausentes: initial_balance",
         ),
         ("transactions", "count", "propriedades obrigatórias ausentes: count"),
+        ("merchants", "count", "propriedades obrigatórias ausentes: count"),
+        ("cards", "per_account", "propriedades obrigatórias ausentes: per_account"),
     ],
 )
 def test_rejects_missing_required_fields(
@@ -124,6 +131,73 @@ def test_rejects_unknown_nested_property(
     transactions["unexpected"] = True
 
     with pytest.raises(ConfigError, match="propriedades desconhecidas: unexpected"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_unknown_card_property(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    cards = config["cards"]
+    assert isinstance(cards, dict)
+    cards["pan"] = "not-allowed"
+
+    with pytest.raises(ConfigError, match="propriedades desconhecidas: pan"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_rejects_invalid_cards_per_account(
+    tmp_path: Path, valid_config: dict[str, object], value: object
+) -> None:
+    config = deepcopy(valid_config)
+    cards = config["cards"]
+    assert isinstance(cards, dict)
+    cards["per_account"] = value
+
+    with pytest.raises(ConfigError, match="cards.per_account"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("rate", [-0.01, 1.01, "NaN"])
+def test_rejects_invalid_initially_blocked_rate(
+    tmp_path: Path, valid_config: dict[str, object], rate: object
+) -> None:
+    config = deepcopy(valid_config)
+    cards = config["cards"]
+    assert isinstance(cards, dict)
+    cards["initially_blocked_rate"] = rate
+
+    with pytest.raises(ConfigError, match="deve estar entre 0 e 1"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("minimum", [0, "0", "0.00", "100.0", 100])
+def test_rejects_invalid_daily_purchase_limit(
+    tmp_path: Path, valid_config: dict[str, object], minimum: object
+) -> None:
+    config = deepcopy(valid_config)
+    cards = config["cards"]
+    assert isinstance(cards, dict)
+    limits = cards["daily_purchase_limit"]
+    assert isinstance(limits, dict)
+    limits["min"] = minimum
+
+    with pytest.raises(ConfigError, match="cards.daily_purchase_limit.min"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_inverted_daily_purchase_limit(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    cards = config["cards"]
+    assert isinstance(cards, dict)
+    limits = cards["daily_purchase_limit"]
+    assert isinstance(limits, dict)
+    limits["min"] = "5000.01"
+
+    with pytest.raises(ConfigError, match="deve ser menor ou igual"):
         load_config(write_config(tmp_path, config))
 
 

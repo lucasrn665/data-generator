@@ -19,6 +19,16 @@ accounts:
     min: "100.00"
     max: "50000.00"
 
+merchants:
+  count: 500
+
+cards:
+  per_account: 1
+  daily_purchase_limit:
+    min: "100.00"
+    max: "5000.00"
+  initially_blocked_rate: 0.05
+
 transactions:
   count: 100000
   # Proporção de todas as transações; independente do status.
@@ -31,5 +41,4 @@ transactions:
   # Proporção de todos os eventos; independente de fraude e status.
   late_event_rate_overall: 0.02
 
-# Endereços, cartões, estabelecimentos e transferências serão configurados em
-# etapas futuras.
+# Endereços e transferências não possuem configuração própria nesta etapa.

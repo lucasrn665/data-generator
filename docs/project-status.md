@@ -62,7 +62,8 @@ Consulte o [modelo de domínio](domain-model.md), as
 - CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
   erros esperados.
 - Manifesto JSON determinístico com versões, parâmetros, contagens, tamanhos e
-  checksums SHA-256 dos quatro CSVs, além de invariantes contábeis agregadas.
+  checksums SHA-256 dos seis CSVs, além de invariantes contábeis e resumos de
+  cartões e estabelecimentos.
 - Publicação conjunta por diretório de staging irmão, com manifesto escrito por
   último e exposição do caminho final somente após sucesso integral.
 - Reexecução idempotente mediante validação exata do manifesto e dos arquivos;
@@ -75,6 +76,12 @@ Consulte o [modelo de domínio](domain-model.md), as
   versão do schema, preservando a coexistência com publicações anteriores.
 - Exportação determinística do ledger validado e reconciliado, com valores
   monetários decimais e timestamps UTC inequívocos.
+- Contrato tipado para quantidade de estabelecimentos, cartões por conta,
+  intervalo de limite diário e taxa inicial de bloqueio.
+- Modelos, schemas e geradores determinísticos isolados para estabelecimentos e
+  cartões exclusivamente de débito, sem credenciais ou identificadores oficiais.
+- Contrato batch `1.2.0`, gerador `0.3.0`, com `cards.csv` e `merchants.csv`
+  integrados à publicação atômica e ao manifesto.
 
 ## Testes e validações disponíveis
 
@@ -93,26 +100,26 @@ Consulte o [modelo de domínio](domain-model.md), as
   publicação por staging, falhas por fase, limpeza segura e conflitos.
 - Geração, ordenação e validação do ledger, cálculo de créditos e débitos,
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
-- pytest: 101 testes passando na execução atual com Python 3.14.4.
+- Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
+  datas, limites, bloqueio e schemas de cartões e estabelecimentos.
+- pytest: 125 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
 
 ## Limitações conhecidas
 
-- Cartões, estabelecimentos, transações e transferências ainda não foram
-  implementados.
+- Transações e transferências ainda não foram implementadas.
 - O ledger publicado contém somente lançamentos de abertura; saldos continuam
   derivados em memória e não são publicados como entidade independente.
-- Ainda não existem schemas PyArrow para entidades futuras.
+- Ainda não existem schemas PyArrow para transações e transferências.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir cartões ou os primeiros eventos financeiros como próximo incremento.
-Compras, transferências e demais tipos de lançamento permanecem fora da etapa
-concluída.
+Definir os primeiros eventos financeiros como próximo incremento. Compras,
+transferências e demais tipos de lançamento permanecem fora da etapa concluída.
 
 ## Comandos principais
 

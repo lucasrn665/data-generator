@@ -12,6 +12,10 @@ posteriores.
   menos uma conta para cada cliente;
 - vínculo de cada conta com exatamente um cliente e tipo de conta restrito a
   `checking` ou `savings`;
+- cartões exclusivamente de débito, vinculados a contas existentes, sem
+  credenciais bancárias e na cardinalidade configurada;
+- limites diários positivos com escala 2, moeda e datas coerentes;
+- categorias e códigos sintéticos de estabelecimentos coerentes;
 - tipos, nulabilidade e precisão compatíveis com o esquema PyArrow;
 - exatamente um crédito de abertura positivo por conta, com moeda coerente,
   referência sintética única e instante efetivo em UTC;
@@ -23,7 +27,7 @@ posteriores.
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.
 - ausência de arquivos gerados dentro de `src/` ou `.git/`.
-- presença dos quatro CSVs e do manifesto em toda execução publicada;
+- presença dos seis CSVs e do manifesto em toda execução publicada;
 - correspondência entre manifesto, contagens, tamanhos e checksums SHA-256;
 - rejeição de reexecuções incompatíveis ou de publicações preexistentes
   incompletas.

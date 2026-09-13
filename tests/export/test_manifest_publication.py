@@ -13,6 +13,7 @@ from banking_data_generator.generation import (
     generate_accounts,
     generate_addresses,
     generate_customers,
+    generate_merchants,
 )
 from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
 
@@ -76,10 +77,22 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
         == f"{sum(account.opening_balance for account in accounts):.2f}"
     )
     assert manifest["parameters"]["customers"]["count"] == len(customers)
+    summary = manifest["domain_summary"]
+    assert summary["merchant_count"] == config.merchants.count
+    assert summary["card_count"] == len(accounts) * config.cards.per_account
+    assert (
+        summary["active_card_count"] + summary["blocked_card_count"]
+        == summary["card_count"]
+    )
+    assert sum(summary["merchant_count_by_category"].values()) == config.merchants.count
+    assert manifest["parameters"]["merchants"]["count"] == config.merchants.count
+    assert manifest["parameters"]["cards"]["per_account"] == config.cards.per_account
     assert set(manifest["files"]) == {
         "customers.csv",
         "addresses.csv",
         "accounts.csv",
+        "cards.csv",
+        "merchants.csv",
         "ledger_entries.csv",
     }
     assert "generated_at" not in manifest
@@ -87,11 +100,16 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
     assert customers[0].customer_id not in raw.decode()
     assert customers[0].synthetic_name not in raw.decode()
     assert customers[0].synthetic_email not in raw.decode()
+    merchant = generate_merchants(config)[0]
+    assert merchant.synthetic_name not in raw.decode()
+    assert merchant.merchant_id not in raw.decode()
 
     expected_counts = {
         "customers.csv": len(customers),
         "addresses.csv": len(addresses),
         "accounts.csv": len(accounts),
+        "cards.csv": len(accounts) * config.cards.per_account,
+        "merchants.csv": config.merchants.count,
         "ledger_entries.csv": len(accounts),
     }
     for filename, expected_count in expected_counts.items():
@@ -137,7 +155,7 @@ def test_failure_in_each_phase_never_exposes_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.1.0"
+        / "schema_version=1.2.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -177,6 +195,16 @@ def test_rejects_divergent_existing_csv(publication_data: tuple) -> None:
     assert publication.paths.accounts.read_bytes() == b"divergent"
 
 
+def test_rejects_divergent_existing_cards(publication_data: tuple) -> None:
+    publication = _publish(publication_data)
+    publication.paths.cards.write_bytes(b"divergent")
+
+    with pytest.raises(ManifestValidationError, match="divergente"):
+        _publish(publication_data)
+
+    assert publication.paths.cards.read_bytes() == b"divergent"
+
+
 def test_rejects_divergent_or_missing_ledger(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.ledger_entries.write_bytes(b"divergent")
@@ -191,7 +219,7 @@ def test_rejects_missing_existing_ledger(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.ledger_entries.unlink()
 
-    with pytest.raises(ManifestValidationError, match="cinco arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="sete arquivos esperados"):
         _publish(publication_data)
 
     assert not publication.paths.ledger_entries.exists()
@@ -214,7 +242,7 @@ def test_old_layout_coexists_with_new_publication(publication_data: tuple) -> No
 
     assert publication.created is True
     assert marker.read_text(encoding="utf-8") == "old publication"
-    assert "schema_version=1.1.0" in publication.paths.directory.parts
+    assert "schema_version=1.2.0" in publication.paths.directory.parts
 
 
 def test_ledger_write_failure_does_not_publish_final_directory(
@@ -238,7 +266,7 @@ def test_ledger_write_failure_does_not_publish_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.1.0"
+        / "schema_version=1.2.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -259,7 +287,7 @@ def test_rejects_missing_existing_file(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.addresses.unlink()
 
-    with pytest.raises(ManifestValidationError, match="cinco arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="sete arquivos esperados"):
         _publish(publication_data)
 
 
@@ -290,14 +318,14 @@ def test_rejects_preexisting_directory_without_manifest(
     final = (
         root
         / "exports"
-        / "schema_version=1.1.0"
+        / "schema_version=1.2.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
     )
     final.mkdir(parents=True)
 
-    with pytest.raises(ManifestValidationError, match="cinco arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="sete arquivos esperados"):
         _publish(publication_data)
 
     assert final.is_dir()

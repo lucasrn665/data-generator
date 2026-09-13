@@ -1,5 +1,6 @@
 """Publicação atômica do conjunto batch válido."""
 
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -17,8 +18,19 @@ from banking_data_generator.accounting import (
     validate_ledger,
 )
 from banking_data_generator.config import BankingDataGeneratorConfig
-from banking_data_generator.domain.enums import EntryDirection, LedgerEntryType
-from banking_data_generator.domain.models import Account, Address, Customer, LedgerEntry
+from banking_data_generator.domain.enums import (
+    EntryDirection,
+    LedgerEntryType,
+    MerchantCategory,
+)
+from banking_data_generator.domain.models import (
+    Account,
+    Address,
+    Customer,
+    DebitCard,
+    LedgerEntry,
+    Merchant,
+)
 from banking_data_generator.export.manifest import (
     MANAGED_FILENAMES,
     build_manifest,
@@ -34,9 +46,13 @@ from banking_data_generator.export.paths import (
 from banking_data_generator.export.tables import (
     accounts_to_table,
     addresses_to_table,
+    cards_to_table,
     customers_to_table,
     ledger_entries_to_table,
+    merchants_to_table,
 )
+from banking_data_generator.generation import generate_cards, generate_merchants
+from banking_data_generator.validation import validate_cards_and_merchants
 from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
 
 _WRITE_OPTIONS = pa_csv.WriteOptions(include_header=True, delimiter=",")
@@ -60,11 +76,18 @@ def write_batch_csv(
     accounts: Sequence[Account],
     ledger_entries: Sequence[LedgerEntry] | None = None,
     *,
+    cards: Sequence[DebitCard] | None = None,
+    merchants: Sequence[Merchant] | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> BatchPublicationResult:
     """Publique atomicamente os CSVs e o manifesto como um único diretório."""
     if ledger_entries is None:
         ledger_entries = generate_opening_entries(accounts)
+    if cards is None:
+        cards = generate_cards(accounts, config)
+    if merchants is None:
+        merchants = generate_merchants(config)
+    validate_cards_and_merchants(config, accounts, cards, merchants)
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
     reconcile_opening_balances(accounts, balances)
@@ -98,16 +121,35 @@ def write_batch_csv(
         "opening_credit_total_brl": f"{opening_credit_total:.2f}",
         "debit_total_brl": f"{debit_total:.2f}",
     }
+    category_counts = Counter(merchant.category for merchant in merchants)
+    domain_summary: dict[str, Any] = {
+        "merchant_count": len(merchants),
+        "card_count": len(cards),
+        "active_card_count": sum(card.status.value == "active" for card in cards),
+        "blocked_card_count": sum(card.status.value == "blocked" for card in cards),
+        "merchant_count_by_category": dict(
+            sorted(
+                {
+                    category.value: category_counts[category]
+                    for category in MerchantCategory
+                }.items()
+            )
+        ),
+    }
     tables = {
         "customers.csv": customers_to_table(customers),
         "addresses.csv": addresses_to_table(addresses),
         "accounts.csv": accounts_to_table(accounts),
+        "cards.csv": cards_to_table(cards),
+        "merchants.csv": merchants_to_table(merchants),
         "ledger_entries.csv": ledger_entries_to_table(ledger_entries),
     }
     record_counts = {
         "customers": len(customers),
         "addresses": len(addresses),
         "accounts": len(accounts),
+        "cards": len(cards),
+        "merchants": len(merchants),
         "ledger_entries": len(ledger_entries),
     }
     final_paths = build_batch_csv_paths(config, project_root=project_root)
@@ -120,7 +162,11 @@ def write_batch_csv(
     try:
         _write_csv_files(tables, staging_paths)
         manifest = build_manifest(
-            config, staging_directory, record_counts, accounting_invariants
+            config,
+            staging_directory,
+            record_counts,
+            accounting_invariants,
+            domain_summary,
         )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)
@@ -146,6 +192,8 @@ def _write_csv_files(
         "customers.csv": paths.customers,
         "addresses.csv": paths.addresses,
         "accounts.csv": paths.accounts,
+        "cards.csv": paths.cards,
+        "merchants.csv": paths.merchants,
         "ledger_entries.csv": paths.ledger_entries,
     }
     for filename, table in tables.items():
@@ -195,6 +243,8 @@ def _paths_in_directory(directory: Path) -> BatchCsvPaths:
         customers=directory / "customers.csv",
         addresses=directory / "addresses.csv",
         accounts=directory / "accounts.csv",
+        cards=directory / "cards.csv",
+        merchants=directory / "merchants.csv",
         ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",
     )

@@ -7,9 +7,14 @@ from decimal import Decimal
 from banking_data_generator.domain.enums import (
     AccountType,
     ActivityProfile,
+    CardStatus,
+    CardType,
     EntityStatus,
     EntryDirection,
     LedgerEntryType,
+    MerchantCategory,
+    MerchantRiskProfile,
+    MerchantStatus,
 )
 
 
@@ -69,3 +74,33 @@ class LedgerEntry:
     effective_at: datetime
     reference_id: str
     sequence_number: int
+
+
+@dataclass(frozen=True, slots=True)
+class Merchant:
+    """Estabelecimento inteiramente sintético e sem identificador oficial."""
+
+    merchant_id: str
+    synthetic_name: str
+    category: MerchantCategory
+    category_code: str
+    city: str
+    state: str
+    country: str
+    risk_profile: MerchantRiskProfile
+    created_date: date
+    status: MerchantStatus
+
+
+@dataclass(frozen=True, slots=True)
+class DebitCard:
+    """Cartão sintético sem PAN, CVV ou credencial bancária."""
+
+    card_id: str
+    account_id: str
+    card_type: CardType
+    status: CardStatus
+    issued_date: date
+    expiration_date: date
+    daily_purchase_limit: Decimal
+    currency: str

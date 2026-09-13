@@ -1,9 +1,9 @@
 # Banking Data Generator
 
 Gerador de dados bancários inteiramente sintéticos para exercícios de engenharia
-de dados no Databricks. O projeto gera clientes, endereços e contas e permite
-exportá-los como um conjunto batch com quatro CSVs e manifesto de integridade.
-O ledger contém somente os lançamentos de abertura nesta etapa.
+de dados no Databricks. O projeto gera clientes, endereços, contas, cartões de
+débito, estabelecimentos e lançamentos de abertura em um conjunto batch com seis
+CSVs e manifesto de integridade.
 
 ## Requisitos
 
@@ -45,11 +45,12 @@ python -m banking_data_generator --config configs/default.yaml
 
 Use `--project-root` quando a raiz desejada não for o diretório atual. A CLI
 carrega a configuração, gera e valida os dados e escreve `customers.csv`,
-`addresses.csv`, `accounts.csv` e `manifest.json` no diretório particionado por
-versão do schema, data de referência, seed e cenário `valid`. O conjunto inclui
-também `ledger_entries.csv` e é publicado de uma só vez; uma reexecução idêntica
+`addresses.csv`, `accounts.csv`, `cards.csv`, `merchants.csv`,
+`ledger_entries.csv` e `manifest.json` no diretório particionado por versão do
+schema, data de referência, seed e cenário `valid`. O conjunto é publicado de
+uma só vez; uma reexecução idêntica
 valida os arquivos existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.1.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.2.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 ## Configuração
 
@@ -66,7 +67,7 @@ referência e seed. Toda geração recebe uma seed.
 
 ## Estado atual
 
-Clientes, endereços, contas, schemas PyArrow, publicação batch atômica com
-manifesto, pipeline e CLI estão implementados. Cartões, estabelecimentos,
-movimentações e transferências permanecem fora do escopo atual. O subledger
-publica os créditos de abertura somente após validar e reconciliar os saldos.
+Clientes, endereços, contas, cartões exclusivamente de débito, estabelecimentos,
+schemas PyArrow, publicação batch atômica com manifesto, pipeline e CLI estão
+implementados. Movimentações e transferências permanecem fora do escopo atual.
+Os cartões não contêm PAN, CVV, senha ou outra credencial bancária.

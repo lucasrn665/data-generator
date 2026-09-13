@@ -36,3 +36,50 @@ class EntryDirection(StrEnum):
 
     CREDIT = "credit"
     DEBIT = "debit"
+
+
+class CardType(StrEnum):
+    """Tipos de cartão permitidos no contrato atual."""
+
+    DEBIT = "debit"
+
+
+class CardStatus(StrEnum):
+    """Estados iniciais de um cartão sintético."""
+
+    ACTIVE = "active"
+    BLOCKED = "blocked"
+
+
+class MerchantCategory(StrEnum):
+    """Categorias fechadas de estabelecimentos sintéticos."""
+
+    GROCERY = "grocery"
+    RESTAURANT = "restaurant"
+    PHARMACY = "pharmacy"
+    FUEL = "fuel"
+    RETAIL = "retail"
+
+
+class MerchantRiskProfile(StrEnum):
+    """Perfis sintéticos de risco de estabelecimento."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class MerchantStatus(StrEnum):
+    """Estados de um estabelecimento sintético."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+MERCHANT_CATEGORY_CODES: dict[MerchantCategory, str] = {
+    MerchantCategory.GROCERY: "SYN-MCC-GROCERY",
+    MerchantCategory.RESTAURANT: "SYN-MCC-RESTAURANT",
+    MerchantCategory.PHARMACY: "SYN-MCC-PHARMACY",
+    MerchantCategory.FUEL: "SYN-MCC-FUEL",
+    MerchantCategory.RETAIL: "SYN-MCC-RETAIL",
+}

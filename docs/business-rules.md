@@ -15,6 +15,13 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   um.
 - Cada conta pertence a exatamente um cliente e possui o tipo `checking` ou
   `savings`.
+- Cada conta possui `cards.per_account` cartões, exclusivamente do tipo `debit`.
+  Cartões referenciam contas, usam `Decimal` no limite diário e não contêm PAN,
+  CVV, senha, trilha magnética ou número bancário.
+- A quantidade bloqueada é a taxa configurada aplicada ao total e arredondada
+  deterministicamente para o inteiro mais próximo com `ROUND_HALF_UP`.
+- Estabelecimentos não possuem CNPJ. Categoria e código obedecem ao conjunto
+  fechado documentado no modelo de domínio, usando códigos `SYN-MCC-*`.
 - O valor monetário da conta gerada é seu saldo de abertura. Cada conta recebe
   exatamente um lançamento de abertura positivo, em crédito e na mesma moeda.
 - O ledger atual é apenas o subledger das contas dos clientes. O crédito de
@@ -39,7 +46,7 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   `.gitignore`.
 - A exportação rejeita caminhos absolutos, escapes da raiz do projeto e
   diretórios de saída localizados dentro de `src/` ou `.git/`.
-- Uma execução válida é publicada atomicamente como um diretório contendo quatro
+- Uma execução válida é publicada atomicamente como um diretório contendo seis
   CSVs e `manifest.json`. O manifesto registra versões, parâmetros, contagens,
   tamanhos e checksums SHA-256 sem dados pessoais ou valores variáveis no tempo.
 - O caminho inclui a versão do schema batch. O manifesto registra agregados
