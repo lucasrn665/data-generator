@@ -9,6 +9,7 @@ from banking_data_generator.domain.models import (
     DebitCard,
     Merchant,
     Transaction,
+    Transfer,
 )
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
@@ -17,6 +18,7 @@ from banking_data_generator.domain.schemas import (
     CUSTOMER_SCHEMA,
     MERCHANT_SCHEMA,
     TRANSACTION_SCHEMA,
+    TRANSFER_SCHEMA,
 )
 
 
@@ -27,6 +29,7 @@ def test_schemas_match_domain_model_fields() -> None:
     assert CARD_SCHEMA.names == [field.name for field in fields(DebitCard)]
     assert MERCHANT_SCHEMA.names == [field.name for field in fields(Merchant)]
     assert TRANSACTION_SCHEMA.names == [field.name for field in fields(Transaction)]
+    assert TRANSFER_SCHEMA.names == [field.name for field in fields(Transfer)]
 
 
 def test_required_fields_are_non_nullable() -> None:
@@ -37,6 +40,7 @@ def test_required_fields_are_non_nullable() -> None:
         CARD_SCHEMA,
         MERCHANT_SCHEMA,
         TRANSACTION_SCHEMA,
+        TRANSFER_SCHEMA,
     ):
         for field in schema:
             if field.name in {
@@ -58,6 +62,7 @@ def test_schema_uses_domain_appropriate_types() -> None:
     assert CARD_SCHEMA.field("expiration_date").type == pa.date32()
     assert CARD_SCHEMA.field("daily_purchase_limit").type == pa.decimal128(18, 2)
     assert TRANSACTION_SCHEMA.field("amount").type == pa.decimal128(18, 2)
+    assert TRANSFER_SCHEMA.field("amount").type == pa.decimal128(18, 2)
 
     for schema in (
         CUSTOMER_SCHEMA,
@@ -66,5 +71,6 @@ def test_schema_uses_domain_appropriate_types() -> None:
         CARD_SCHEMA,
         MERCHANT_SCHEMA,
         TRANSACTION_SCHEMA,
+        TRANSFER_SCHEMA,
     ):
         assert schema.field(schema.names[0]).type == pa.string()

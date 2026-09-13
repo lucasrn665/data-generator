@@ -14,6 +14,7 @@ from banking_data_generator.export.tables import (
     ledger_entries_to_table,
     merchants_to_table,
     transactions_to_table,
+    transfers_to_table,
 )
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "ledger_entries_to_table",
     "merchants_to_table",
     "transactions_to_table",
+    "transfers_to_table",
     "write_batch_csv",
 ]

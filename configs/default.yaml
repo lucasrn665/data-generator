@@ -45,4 +45,11 @@ transactions:
   # Proporção de todos os eventos; independente de fraude e status.
   late_event_rate_overall: 0.02
 
-# Endereços e transferências não possuem configuração própria nesta etapa.
+transfers:
+  count: 10000
+  min_amount: "10.00"
+  max_amount: "1000.00"
+  declined_rate_overall: 0.03
+  history_days: 365
+
+# Endereços não possuem configuração própria nesta etapa.

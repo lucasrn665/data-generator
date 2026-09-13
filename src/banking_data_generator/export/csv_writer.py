@@ -31,6 +31,7 @@ from banking_data_generator.domain.models import (
     LedgerEntry,
     Merchant,
     Transaction,
+    Transfer,
 )
 from banking_data_generator.export.manifest import (
     MANAGED_FILENAMES,
@@ -52,6 +53,7 @@ from banking_data_generator.export.tables import (
     ledger_entries_to_table,
     merchants_to_table,
     transactions_to_table,
+    transfers_to_table,
 )
 from banking_data_generator.generation import generate_cards, generate_merchants
 from banking_data_generator.validation import (
@@ -60,8 +62,10 @@ from banking_data_generator.validation import (
     reconcile_reversal_balances,
     validate_card_purchases,
     validate_cards_and_merchants,
+    validate_internal_transfers,
     validate_purchase_reversals,
 )
+from banking_data_generator.validation.transfers import TransferValidationError
 from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
 
 _WRITE_OPTIONS = pa_csv.WriteOptions(include_header=True, delimiter=",")
@@ -88,6 +92,7 @@ def write_batch_csv(
     cards: Sequence[DebitCard] | None = None,
     merchants: Sequence[Merchant] | None = None,
     transactions: Sequence[Transaction] | None = None,
+    transfers: Sequence[Transfer] | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> BatchPublicationResult:
     """Publique atomicamente os CSVs e o manifesto como um único diretório."""
@@ -99,6 +104,7 @@ def write_batch_csv(
         merchants = generate_merchants(config)
     validate_cards_and_merchants(config, accounts, cards, merchants)
     transactions = [] if transactions is None else transactions
+    transfers = [] if transfers is None else transfers
     purchase_entries = [
         entry
         for entry in ledger_entries
@@ -122,14 +128,45 @@ def write_batch_csv(
     )
     validate_purchase_reversals(config, purchases, reversals, reversal_entries)
     net_daily_consumption = calculate_net_daily_consumption(cards, purchases, reversals)
+    transfer_entries = [
+        entry
+        for entry in ledger_entries
+        if entry.entry_type
+        in {
+            LedgerEntryType.INTERNAL_TRANSFER_DEBIT,
+            LedgerEntryType.INTERNAL_TRANSFER_CREDIT,
+        }
+    ]
+    pre_transfer_entries = [
+        entry
+        for entry in ledger_entries
+        if entry.entry_type
+        not in {
+            LedgerEntryType.INTERNAL_TRANSFER_DEBIT,
+            LedgerEntryType.INTERNAL_TRANSFER_CREDIT,
+        }
+    ]
+    validate_ledger(accounts, pre_transfer_entries)
+    balances_before_transfers = calculate_all_account_balances(
+        accounts, pre_transfer_entries
+    )
+    if reversals:
+        reconcile_reversal_balances(
+            accounts, purchases, reversals, balances_before_transfers
+        )
+    elif purchase_entries:
+        reconcile_purchase_balances(accounts, purchases, balances_before_transfers)
+    else:
+        reconcile_opening_balances(accounts, balances_before_transfers)
+    expected_balances = validate_internal_transfers(
+        config, accounts, transfers, transfer_entries, balances_before_transfers
+    )
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
-    if reversals:
-        reconcile_reversal_balances(accounts, purchases, reversals, balances)
-    elif purchase_entries:
-        reconcile_purchase_balances(accounts, purchases, balances)
-    else:
-        reconcile_opening_balances(accounts, balances)
+    if balances != expected_balances:
+        raise TransferValidationError(
+            "Transferências inválidas: saldos finais divergentes do ledger."
+        )
     opening_entries = [
         entry
         for entry in ledger_entries
@@ -186,9 +223,9 @@ def write_batch_csv(
         if transaction.status.value == "declined"
     ]
     target_declines = int(
-        (
-            Decimal(len(transactions)) * config.transactions.declined_rate_overall
-        ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        (Decimal(len(purchases)) * config.transactions.declined_rate_overall).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
     )
     reason_counts = Counter(
         transaction.decline_reason.value
@@ -228,6 +265,62 @@ def write_batch_csv(
         "reversal_ledger_credit_total": f"{reversal_credit_total:.2f}",
         "net_daily_consumption_total": f"{net_daily_total:.2f}",
     }
+    completed_transfers = [
+        item for item in transfers if item.status.value == "completed"
+    ]
+    declined_transfers = [item for item in transfers if item.status.value == "declined"]
+    transfer_reason_counts = Counter(
+        item.decline_reason.value
+        for item in declined_transfers
+        if item.decline_reason is not None
+    )
+    transfer_debits = [
+        item
+        for item in transfer_entries
+        if item.entry_type is LedgerEntryType.INTERNAL_TRANSFER_DEBIT
+    ]
+    transfer_credits = [
+        item
+        for item in transfer_entries
+        if item.entry_type is LedgerEntryType.INTERNAL_TRANSFER_CREDIT
+    ]
+    transfer_debit_total = sum(
+        (item.amount for item in transfer_debits), Decimal("0.00")
+    )
+    transfer_credit_total = sum(
+        (item.amount for item in transfer_credits), Decimal("0.00")
+    )
+    completed_transfer_total = sum(
+        (item.amount for item in completed_transfers), Decimal("0.00")
+    )
+    declined_transfer_total = sum(
+        (item.amount for item in declined_transfers), Decimal("0.00")
+    )
+    balance_before_total = sum(balances_before_transfers.values(), Decimal("0.00"))
+    balance_after_total = sum(balances.values(), Decimal("0.00"))
+    conservation_difference = transfer_credit_total - transfer_debit_total
+    target_transfer_declines = int(
+        (Decimal(len(transfers)) * config.transfers.declined_rate_overall).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    )
+    transfer_summary: dict[str, Any] = {
+        "transfer_attempt_count": len(transfers),
+        "completed_transfer_count": len(completed_transfers),
+        "declined_transfer_count": len(declined_transfers),
+        "target_decline_count": target_transfer_declines,
+        "planned_decline_count": transfer_reason_counts["synthetic_risk_rule"],
+        "additional_decline_count": transfer_reason_counts["insufficient_funds"],
+        "decline_count_by_reason": dict(sorted(transfer_reason_counts.items())),
+        "completed_amount_total": f"{completed_transfer_total:.2f}",
+        "declined_amount_total": f"{declined_transfer_total:.2f}",
+        "transfer_debit_total": f"{transfer_debit_total:.2f}",
+        "transfer_credit_total": f"{transfer_credit_total:.2f}",
+        "conservation_difference": f"{conservation_difference:.2f}",
+        "aggregate_balance_before_transfers": f"{balance_before_total:.2f}",
+        "aggregate_balance_after_transfers": f"{balance_after_total:.2f}",
+        "reconciliation_failure_count": 0,
+    }
     tables = {
         "customers.csv": customers_to_table(customers),
         "addresses.csv": addresses_to_table(addresses),
@@ -235,6 +328,7 @@ def write_batch_csv(
         "cards.csv": cards_to_table(cards),
         "merchants.csv": merchants_to_table(merchants),
         "transactions.csv": transactions_to_table(transactions),
+        "transfers.csv": transfers_to_table(transfers),
         "ledger_entries.csv": ledger_entries_to_table(ledger_entries),
     }
     record_counts = {
@@ -244,6 +338,7 @@ def write_batch_csv(
         "cards": len(cards),
         "merchants": len(merchants),
         "transactions": len(transactions),
+        "transfers": len(transfers),
         "ledger_entries": len(ledger_entries),
     }
     final_paths = build_batch_csv_paths(config, project_root=project_root)
@@ -262,6 +357,7 @@ def write_batch_csv(
             accounting_invariants,
             domain_summary,
             transaction_summary,
+            transfer_summary,
         )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)
@@ -290,6 +386,7 @@ def _write_csv_files(
         "cards.csv": paths.cards,
         "merchants.csv": paths.merchants,
         "transactions.csv": paths.transactions,
+        "transfers.csv": paths.transfers,
         "ledger_entries.csv": paths.ledger_entries,
     }
     for filename, table in tables.items():
@@ -342,6 +439,7 @@ def _paths_in_directory(directory: Path) -> BatchCsvPaths:
         cards=directory / "cards.csv",
         merchants=directory / "merchants.csv",
         transactions=directory / "transactions.csv",
+        transfers=directory / "transfers.csv",
         ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",
     )

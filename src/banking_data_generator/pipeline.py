@@ -27,6 +27,7 @@ from banking_data_generator.generation import (
     generate_card_purchases,
     generate_cards,
     generate_customers,
+    generate_internal_transfers,
     generate_merchants,
     generate_purchase_reversals,
 )
@@ -35,6 +36,7 @@ from banking_data_generator.validation import (
     reconcile_reversal_balances,
     validate_card_purchases,
     validate_cards_and_merchants,
+    validate_internal_transfers,
     validate_purchase_reversals,
 )
 
@@ -54,6 +56,7 @@ class BatchPipelineResult:
     cards_file: Path
     merchants_file: Path
     transactions_file: Path
+    transfers_file: Path
     ledger_entries_file: Path
     manifest_file: Path
     customer_count: int
@@ -72,6 +75,14 @@ class BatchPipelineResult:
     transaction_event_count: int
     reversed_amount_total: Decimal
     final_balance_total: Decimal
+    transfer_attempt_count: int
+    completed_transfer_count: int
+    declined_transfer_count: int
+    transfer_target_decline_count: int
+    transfer_planned_decline_count: int
+    transfer_additional_decline_count: int
+    completed_transfer_amount_total: Decimal
+    declined_transfer_amount_total: Decimal
     ledger_entry_count: int
     opening_credit_total: Decimal
     seed: int
@@ -117,18 +128,42 @@ def run_batch_pipeline(
         [*purchases.transactions, *reversal_result.reversals],
         key=lambda item: (item.effective_at, item.transaction_id),
     )
-    ledger_entries = sort_ledger_entries(
+    pre_transfer_ledger = sort_ledger_entries(
         [
             *generate_opening_entries(accounts),
             *purchases.ledger_entries,
             *reversal_result.ledger_entries,
         ]
     )
+    validate_ledger(accounts, pre_transfer_ledger)
+    balances_before_transfers = calculate_all_account_balances(
+        accounts, pre_transfer_ledger
+    )
+    reconcile_reversal_balances(
+        accounts,
+        purchases.transactions,
+        reversal_result.reversals,
+        balances_before_transfers,
+    )
+    transfer_result = generate_internal_transfers(
+        accounts, balances_before_transfers, transaction_events, config
+    )
+    expected_balances = validate_internal_transfers(
+        config,
+        accounts,
+        transfer_result.transfers,
+        transfer_result.ledger_entries,
+        balances_before_transfers,
+    )
+    ledger_entries = sort_ledger_entries(
+        [*pre_transfer_ledger, *transfer_result.ledger_entries]
+    )
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
-    reconcile_reversal_balances(
-        accounts, purchases.transactions, reversal_result.reversals, balances
-    )
+    if balances != expected_balances:
+        raise DatasetValidationError(
+            "saldos derivados do ledger divergem do efeito das transferências"
+        )
     opening_credit_total = sum(
         (
             entry.amount
@@ -147,6 +182,7 @@ def run_batch_pipeline(
         cards=cards,
         merchants=merchants,
         transactions=transaction_events,
+        transfers=transfer_result.transfers,
         project_root=project_root,
     )
     return BatchPipelineResult(
@@ -157,6 +193,7 @@ def run_batch_pipeline(
         cards_file=publication.paths.cards,
         merchants_file=publication.paths.merchants,
         transactions_file=publication.paths.transactions,
+        transfers_file=publication.paths.transfers,
         ledger_entries_file=publication.paths.ledger_entries,
         manifest_file=publication.paths.manifest,
         customer_count=len(customers),
@@ -183,6 +220,32 @@ def run_batch_pipeline(
             (item.amount for item in reversal_result.reversals), Decimal("0.00")
         ),
         final_balance_total=sum(balances.values(), Decimal("0.00")),
+        transfer_attempt_count=len(transfer_result.transfers),
+        completed_transfer_count=sum(
+            item.status.value == "completed" for item in transfer_result.transfers
+        ),
+        declined_transfer_count=sum(
+            item.status.value == "declined" for item in transfer_result.transfers
+        ),
+        transfer_target_decline_count=transfer_result.target_declines,
+        transfer_planned_decline_count=transfer_result.planned_declines,
+        transfer_additional_decline_count=transfer_result.additional_declines,
+        completed_transfer_amount_total=sum(
+            (
+                item.amount
+                for item in transfer_result.transfers
+                if item.status.value == "completed"
+            ),
+            Decimal("0.00"),
+        ),
+        declined_transfer_amount_total=sum(
+            (
+                item.amount
+                for item in transfer_result.transfers
+                if item.status.value == "declined"
+            ),
+            Decimal("0.00"),
+        ),
         ledger_entry_count=len(ledger_entries),
         opening_credit_total=opening_credit_total,
         seed=config.seed,

@@ -15,6 +15,10 @@ from banking_data_generator.validation.reversals import (
     reconcile_reversal_balances,
     validate_purchase_reversals,
 )
+from banking_data_generator.validation.transfers import (
+    TransferValidationError,
+    validate_internal_transfers,
+)
 
 __all__ = [
     "ExtendedDomainValidationError",
@@ -26,4 +30,6 @@ __all__ = [
     "validate_card_purchases",
     "validate_cards_and_merchants",
     "validate_purchase_reversals",
+    "TransferValidationError",
+    "validate_internal_transfers",
 ]

@@ -62,7 +62,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
     expected_directory = (
         root
         / "exports"
-        / "schema_version=1.4.0"
+        / "schema_version=1.5.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -77,6 +77,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
             paths.cards,
             paths.merchants,
             paths.transactions,
+            paths.transfers,
             paths.ledger_entries,
         )
     } == {
@@ -86,6 +87,7 @@ def test_writes_expected_files_with_headers_and_rows(batch_data: tuple) -> None:
         "cards.csv",
         "merchants.csv",
         "transactions.csv",
+        "transfers.csv",
         "ledger_entries.csv",
     }
     for path, schema, records in (

@@ -76,6 +76,17 @@ class TransactionsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class TransfersConfig:
+    """Parâmetros das tentativas de transferência interna."""
+
+    count: int
+    min_amount: Decimal
+    max_amount: Decimal
+    declined_rate_overall: Decimal
+    history_days: int
+
+
+@dataclass(frozen=True, slots=True)
 class BankingDataGeneratorConfig:
     """Configuração validada do gerador de dados bancários."""
 
@@ -88,3 +99,4 @@ class BankingDataGeneratorConfig:
     merchants: MerchantsConfig
     cards: CardsConfig
     transactions: TransactionsConfig
+    transfers: TransfersConfig

@@ -11,6 +11,7 @@ from banking_data_generator.config.models import (
     MerchantsConfig,
     OutputConfig,
     TransactionsConfig,
+    TransfersConfig,
 )
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "MerchantsConfig",
     "OutputConfig",
     "TransactionsConfig",
+    "TransfersConfig",
     "load_config",
 ]

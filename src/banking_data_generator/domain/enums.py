@@ -31,6 +31,8 @@ class LedgerEntryType(StrEnum):
     OPENING_BALANCE = "opening_balance"
     CARD_PURCHASE = "card_purchase"
     CARD_PURCHASE_REVERSAL = "card_purchase_reversal"
+    INTERNAL_TRANSFER_DEBIT = "internal_transfer_debit"
+    INTERNAL_TRANSFER_CREDIT = "internal_transfer_credit"
 
 
 class EntryDirection(StrEnum):
@@ -103,4 +105,18 @@ class DeclineReason(StrEnum):
     INSUFFICIENT_FUNDS = "insufficient_funds"
     DAILY_LIMIT_EXCEEDED = "daily_limit_exceeded"
     MERCHANT_INACTIVE = "merchant_inactive"
+    SYNTHETIC_RISK_RULE = "synthetic_risk_rule"
+
+
+class TransferType(StrEnum):
+    INTERNAL_TRANSFER = "internal_transfer"
+
+
+class TransferStatus(StrEnum):
+    COMPLETED = "completed"
+    DECLINED = "declined"
+
+
+class TransferDeclineReason(StrEnum):
+    INSUFFICIENT_FUNDS = "insufficient_funds"
     SYNTHETIC_RISK_RULE = "synthetic_risk_rule"

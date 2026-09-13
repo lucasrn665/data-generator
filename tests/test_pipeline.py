@@ -27,6 +27,7 @@ def pipeline_config() -> BankingDataGeneratorConfig:
             count=30,
             reversal_rate_of_approved=Decimal("0.50"),
         ),
+        transfers=replace(config.transfers, count=20),
     )
 
 
@@ -44,7 +45,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.4.0"
+        / "schema_version=1.5.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -56,9 +57,13 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.cards_file.is_file()
     assert result.merchants_file.is_file()
     assert result.transactions_file.is_file()
+    assert result.transfers_file.is_file()
     assert result.manifest_file.is_file()
     assert result.ledger_entry_count == (
-        result.account_count + result.approved_transaction_count + result.reversal_count
+        result.account_count
+        + result.approved_transaction_count
+        + result.reversal_count
+        + 2 * result.completed_transfer_count
     )
     assert result.opening_credit_total > Decimal("0.00")
     assert result.card_count == result.account_count * pipeline_config.cards.per_account
@@ -76,8 +81,10 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         result.purchase_attempt_count + result.reversal_count
     )
     assert result.reversal_count == result.reversal_target_count
-    assert result.generator_version == "0.5.0"
-    assert result.schema_version == "1.4.0"
+    assert result.transfer_attempt_count == 20
+    assert result.completed_transfer_count + result.declined_transfer_count == 20
+    assert result.generator_version == "0.6.0"
+    assert result.schema_version == "1.5.0"
     assert result.created is True
     assert {path.name for path in result.output_directory.iterdir()} == {
         "customers.csv",
@@ -86,6 +93,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         "cards.csv",
         "merchants.csv",
         "transactions.csv",
+        "transfers.csv",
         "ledger_entries.csv",
         "manifest.json",
     }
@@ -93,6 +101,8 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         transaction_rows = list(csv.DictReader(file))
     with result.ledger_entries_file.open(encoding="utf-8", newline="") as file:
         ledger_rows = list(csv.DictReader(file))
+    with result.transfers_file.open(encoding="utf-8", newline="") as file:
+        transfer_rows = list(csv.DictReader(file))
     assert len(transaction_rows) == result.transaction_event_count
     assert {row["account_id"] for row in transaction_rows} <= {
         row["account_id"] for row in ledger_rows
@@ -115,6 +125,9 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     ]
     assert all(row["original_transaction_id"] == "" for row in purchase_rows)
     assert all(row["original_transaction_id"] in approved_ids for row in reversal_rows)
+    account_ids = {row["account_id"] for row in ledger_rows}
+    assert {row["source_account_id"] for row in transfer_rows} <= account_ids
+    assert {row["destination_account_id"] for row in transfer_rows} <= account_ids
     manifest = json.loads(result.manifest_file.read_text(encoding="utf-8"))
     summary = manifest["transaction_summary"]
     assert summary["purchase_attempt_count"] == result.purchase_attempt_count
@@ -134,6 +147,18 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     ):
         assert isinstance(summary[field], str)
         assert len(summary[field].partition(".")[2]) == 2
+    transfer_summary = manifest["transfer_summary"]
+    assert transfer_summary["transfer_attempt_count"] == result.transfer_attempt_count
+    assert (
+        transfer_summary["completed_transfer_count"] == result.completed_transfer_count
+    )
+    assert transfer_summary["declined_transfer_count"] == result.declined_transfer_count
+    assert transfer_summary["conservation_difference"] == "0.00"
+    assert (
+        transfer_summary["aggregate_balance_before_transfers"]
+        == transfer_summary["aggregate_balance_after_transfers"]
+    )
+    assert manifest["files"]["transfers.csv"]["record_count"] == 20
 
 
 def test_repeated_pipeline_produces_identical_files(

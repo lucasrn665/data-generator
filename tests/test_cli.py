@@ -15,6 +15,7 @@ def cli_project(tmp_path: Path) -> Path:
     contents = contents.replace("directory: data/output", "directory: output")
     contents = contents.replace("count: 10000", "count: 4", 1)
     contents = contents.replace("count: 100000", "count: 20", 1)
+    contents = contents.replace("transfers:\n  count: 10000", "transfers:\n  count: 20")
     (config_directory / "test.yaml").write_text(contents, encoding="utf-8")
     return tmp_path
 
@@ -27,7 +28,7 @@ def test_help_is_clear_and_successful(capsys: pytest.CaptureFixture[str]) -> Non
     output = capsys.readouterr().out
     assert "--config" in output
     assert "--project-root" in output
-    assert "sete arquivos CSV" in output
+    assert "oito arquivos CSV" in output
 
 
 def test_missing_required_argument_returns_argparse_error(
@@ -76,19 +77,21 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "eventos de transação:" in captured.out
     assert "valor estornado:" in captured.out
     assert "saldo agregado final:" in captured.out
-    assert "versão do gerador: 0.5.0" in captured.out
-    assert "versão do schema: 1.4.0" in captured.out
+    assert "tentativas de transferência:" in captured.out
+    assert "transferências concluídas:" in captured.out
+    assert "versão do gerador: 0.6.0" in captured.out
+    assert "versão do schema: 1.5.0" in captured.out
     assert "publicação: criada" in captured.out
     assert (
-        "merchants.csv, transactions.csv, ledger_entries.csv, manifest.json"
-        in captured.out
+        "merchants.csv, transactions.csv, transfers.csv, "
+        "ledger_entries.csv, manifest.json" in captured.out
     )
     assert "SYN-CUS-" not in captured.out
 
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.4.0"
+        / "schema_version=1.5.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -100,6 +103,7 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
         "cards.csv",
         "merchants.csv",
         "transactions.csv",
+        "transfers.csv",
         "ledger_entries.csv",
     }
     assert (directory / "manifest.json").is_file()

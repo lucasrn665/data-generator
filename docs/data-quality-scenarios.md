@@ -28,11 +28,14 @@ posteriores.
 - vínculo válido entre estorno e transação original;
 - no máximo um crédito integral de estorno para cada compra aprovada selecionada;
 - saldo e consumo diário líquido reconciliados após estornos, nunca negativos;
-- igualdade entre débito e crédito de uma transferência;
+- correspondência exata entre cada transferência concluída e seu par de
+  lançamentos, sem lançamentos em recusas;
+- igualdade dos totais debitado e creditado em transferências, saldo agregado
+  conservado e ausência de saldo negativo intermediário;
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.
 - ausência de arquivos gerados dentro de `src/` ou `.git/`.
-- presença dos sete CSVs e do manifesto em toda execução publicada;
+- presença dos oito CSVs e do manifesto em toda execução publicada;
 - correspondência entre manifesto, contagens, tamanhos e checksums SHA-256;
 - rejeição de reexecuções incompatíveis ou de publicações preexistentes
   incompletas.

@@ -14,6 +14,11 @@ from banking_data_generator.generation.transactions import (
     PurchaseGenerationResult,
     generate_card_purchases,
 )
+from banking_data_generator.generation.transfers import (
+    TransferGenerationError,
+    TransferGenerationResult,
+    generate_internal_transfers,
+)
 
 __all__ = [
     "generate_accounts",
@@ -26,4 +31,7 @@ __all__ = [
     "ReversalGenerationResult",
     "calculate_reversal_target",
     "generate_purchase_reversals",
+    "TransferGenerationError",
+    "TransferGenerationResult",
+    "generate_internal_transfers",
 ]

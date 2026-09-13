@@ -12,6 +12,7 @@ from banking_data_generator.domain.models import (
     LedgerEntry,
     Merchant,
     Transaction,
+    Transfer,
 )
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
@@ -21,6 +22,7 @@ from banking_data_generator.domain.schemas import (
     LEDGER_ENTRY_SCHEMA,
     MERCHANT_SCHEMA,
     TRANSACTION_SCHEMA,
+    TRANSFER_SCHEMA,
 )
 
 
@@ -158,3 +160,26 @@ def transactions_to_table(transactions: Sequence[Transaction]) -> pa.Table:
         for transaction in transactions
     ]
     return pa.Table.from_pylist(records, schema=TRANSACTION_SCHEMA)
+
+
+def transfers_to_table(transfers: Sequence[Transfer]) -> pa.Table:
+    """Converta transferências sem transformar valores monetários em float."""
+    records = [
+        {
+            "transfer_id": transfer.transfer_id,
+            "source_account_id": transfer.source_account_id,
+            "destination_account_id": transfer.destination_account_id,
+            "transfer_type": transfer.transfer_type.value,
+            "status": transfer.status.value,
+            "amount": transfer.amount,
+            "currency": transfer.currency,
+            "effective_at": transfer.effective_at,
+            "event_at": transfer.event_at,
+            "ingested_at": transfer.ingested_at,
+            "decline_reason": (
+                transfer.decline_reason.value if transfer.decline_reason else None
+            ),
+        }
+        for transfer in transfers
+    ]
+    return pa.Table.from_pylist(records, schema=TRANSFER_SCHEMA)

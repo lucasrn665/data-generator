@@ -59,7 +59,15 @@ def validate_ledger(
     if len(entry_ids) != len(set(entry_ids)):
         _fail("entry_id duplicado")
 
-    reference_ids = [entry.reference_id for entry in entries]
+    reference_ids = [
+        entry.reference_id
+        for entry in entries
+        if entry.entry_type
+        not in {
+            LedgerEntryType.INTERNAL_TRANSFER_DEBIT,
+            LedgerEntryType.INTERNAL_TRANSFER_CREDIT,
+        }
+    ]
     if len(reference_ids) != len(set(reference_ids)):
         _fail("reference_id de abertura duplicado")
 

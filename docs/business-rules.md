@@ -30,8 +30,7 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
 - O instante efetivo da abertura é `00:00:00 UTC` na `opened_date` da conta,
   data que já é derivada deterministicamente de `reference_date`.
 - Saldos são sempre calculados como créditos menos débitos, sem estado mutável,
-  e devem reconciliar exatamente com o saldo de abertura. Transferências
-  futuras deverão gerar efeitos equivalentes e opostos entre contas.
+  e devem reconciliar exatamente com todo o ledger.
 - Contas não podem possuir saldo negativo e, inicialmente, não haverá cheque
   especial.
 - Tentativas de compra são ordenadas por `effective_at` e ID. Aprovações exigem
@@ -47,7 +46,14 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   compra imutável, gera um crédito e recompõe saldo e consumo no dia da compra.
 - `transactions.count` conta somente tentativas de compra. Estornos são eventos
   adicionais: total de eventos é tentativas mais estornos.
-- Transferências geram efeitos equivalentes e opostos na origem e no destino.
+- Tentativas de transferência usam uma seed própria e são ordenadas depois dos
+  eventos de cartão. A cota de recusas usa `ROUND_HALF_UP`; restrições de saldo
+  podem produzir recusas adicionais.
+- Transferências concluídas geram atomicamente um débito na origem e um crédito
+  no destino, com mesmo valor, moeda, referência e instante. Recusas não geram
+  lançamentos. Nenhum saldo intermediário pode ficar negativo.
+- Débitos e créditos de transferência devem ser iguais, portanto seu efeito no
+  saldo agregado das contas do banco fictício é sempre zero.
 - Saldos são reconciliáveis com as movimentações aprovadas.
 - O diretório padrão de saída é `data/output`. Caminhos relativos são resolvidos
   a partir da raiz do projeto.
@@ -56,7 +62,7 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   `.gitignore`.
 - A exportação rejeita caminhos absolutos, escapes da raiz do projeto e
   diretórios de saída localizados dentro de `src/` ou `.git/`.
-- Uma execução válida é publicada atomicamente como um diretório contendo sete
+- Uma execução válida é publicada atomicamente como um diretório contendo oito
   CSVs e `manifest.json`. O manifesto registra versões, parâmetros, contagens,
   tamanhos e checksums SHA-256 sem dados pessoais ou valores variáveis no tempo.
 - O caminho inclui a versão do schema batch. O manifesto registra agregados

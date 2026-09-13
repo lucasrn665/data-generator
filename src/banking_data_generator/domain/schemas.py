@@ -101,3 +101,19 @@ TRANSACTION_SCHEMA = pa.schema(
         pa.field("original_transaction_id", pa.string(), nullable=True),
     ]
 )
+
+TRANSFER_SCHEMA = pa.schema(
+    [
+        pa.field("transfer_id", pa.string(), nullable=False),
+        pa.field("source_account_id", pa.string(), nullable=False),
+        pa.field("destination_account_id", pa.string(), nullable=False),
+        pa.field("transfer_type", pa.string(), nullable=False),
+        pa.field("status", pa.string(), nullable=False),
+        pa.field("amount", pa.decimal128(18, 2), nullable=False),
+        pa.field("currency", pa.string(), nullable=False),
+        pa.field("effective_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("event_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("ingested_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("decline_reason", pa.string(), nullable=True),
+    ]
+)

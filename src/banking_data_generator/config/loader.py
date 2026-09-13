@@ -18,6 +18,7 @@ from banking_data_generator.config.models import (
     MerchantsConfig,
     OutputConfig,
     TransactionsConfig,
+    TransfersConfig,
 )
 
 _ROOT_FIELDS = {
@@ -30,6 +31,7 @@ _ROOT_FIELDS = {
     "merchants",
     "cards",
     "transactions",
+    "transfers",
 }
 _OUTPUT_FIELDS = {"directory", "format"}
 _CUSTOMERS_FIELDS = {"count"}
@@ -48,6 +50,13 @@ _TRANSACTIONS_FIELDS = {
     "late_event_rate_overall",
 }
 _PURCHASE_AMOUNT_FIELDS = {"min", "max"}
+_TRANSFERS_FIELDS = {
+    "count",
+    "min_amount",
+    "max_amount",
+    "declined_rate_overall",
+    "history_days",
+}
 _ZERO = Decimal("0")
 _ONE = Decimal("1")
 
@@ -80,6 +89,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     merchants = _mapping(root["merchants"], "merchants")
     cards = _mapping(root["cards"], "cards")
     transactions = _mapping(root["transactions"], "transactions")
+    transfers = _mapping(root["transfers"], "transfers")
 
     _validate_fields(output, _OUTPUT_FIELDS, "output")
     _validate_fields(customers, _CUSTOMERS_FIELDS, "customers")
@@ -91,6 +101,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
         "accounts.initial_balance",
     )
     _validate_fields(transactions, _TRANSACTIONS_FIELDS, "transactions")
+    _validate_fields(transfers, _TRANSFERS_FIELDS, "transfers")
     purchase_amount = _mapping(
         transactions["purchase_amount"], "transactions.purchase_amount"
     )
@@ -136,6 +147,16 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     )
     if minimum_purchase <= _ZERO:
         _fail("transactions.purchase_amount.min", "deve ser maior que 0.00")
+    minimum_transfer = _money(transfers["min_amount"], "transfers.min_amount")
+    maximum_transfer = _money(transfers["max_amount"], "transfers.max_amount")
+    _validate_order(
+        minimum_transfer,
+        maximum_transfer,
+        "transfers.min_amount",
+        "transfers.max_amount",
+    )
+    if minimum_transfer <= _ZERO:
+        _fail("transfers.min_amount", "deve ser maior que 0.00")
 
     minimum_accounts = _positive_int(
         accounts["min_per_customer"], "accounts.min_per_customer"
@@ -205,6 +226,18 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
             late_event_rate_overall=_rate(
                 transactions["late_event_rate_overall"],
                 "transactions.late_event_rate_overall",
+            ),
+        ),
+        transfers=TransfersConfig(
+            count=_non_negative_int(transfers["count"], "transfers.count"),
+            min_amount=minimum_transfer,
+            max_amount=maximum_transfer,
+            declined_rate_overall=_rate(
+                transfers["declined_rate_overall"],
+                "transfers.declined_rate_overall",
+            ),
+            history_days=_positive_int(
+                transfers["history_days"], "transfers.history_days"
             ),
         ),
     )

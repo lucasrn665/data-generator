@@ -10,6 +10,7 @@ import pyarrow as pa
 from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import ConfigError, load_config
 from banking_data_generator.export import ManifestValidationError, UnsafeOutputPath
+from banking_data_generator.generation import TransferGenerationError
 from banking_data_generator.pipeline import (
     BatchPipelineResult,
     DatasetValidationError,
@@ -19,6 +20,7 @@ from banking_data_generator.validation import (
     ExtendedDomainValidationError,
     ReversalValidationError,
     TransactionValidationError,
+    TransferValidationError,
 )
 
 
@@ -30,7 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Construa o parser público da linha de comando."""
     parser = argparse.ArgumentParser(
         prog="python -m banking_data_generator",
-        description=("Gera o domínio bancário sintético atual em sete arquivos CSV."),
+        description=("Gera o domínio bancário sintético atual em oito arquivos CSV."),
     )
     parser.add_argument(
         "--config",
@@ -69,6 +71,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         ExtendedDomainValidationError,
         TransactionValidationError,
         ReversalValidationError,
+        TransferValidationError,
+        TransferGenerationError,
         ManifestValidationError,
         UnsafeOutputPath,
         OSError,
@@ -102,6 +106,22 @@ def print_success_summary(result: BatchPipelineResult) -> None:
     print(f"eventos de transação: {result.transaction_event_count}")
     print(f"valor estornado: {result.reversed_amount_total:.2f} BRL")
     print(f"saldo agregado final: {result.final_balance_total:.2f} BRL")
+    print(f"tentativas de transferência: {result.transfer_attempt_count}")
+    print(f"transferências concluídas: {result.completed_transfer_count}")
+    print(f"transferências recusadas: {result.declined_transfer_count}")
+    print(f"meta de recusas de transferência: {result.transfer_target_decline_count}")
+    print(
+        f"recusas planejadas de transferência: {result.transfer_planned_decline_count}"
+    )
+    print(
+        "recusas adicionais de transferência: "
+        f"{result.transfer_additional_decline_count}"
+    )
+    print(f"valor transferido: {result.completed_transfer_amount_total:.2f} BRL")
+    print(
+        "valor recusado em transferências: "
+        f"{result.declined_transfer_amount_total:.2f} BRL"
+    )
     print(f"lançamentos: {result.ledger_entry_count}")
     print(f"créditos de abertura: {result.opening_credit_total:.2f} BRL")
     print(f"versão do gerador: {result.generator_version}")
@@ -117,6 +137,7 @@ def print_success_summary(result: BatchPipelineResult) -> None:
         f"{result.cards_file.name}, "
         f"{result.merchants_file.name}, "
         f"{result.transactions_file.name}, "
+        f"{result.transfers_file.name}, "
         f"{result.ledger_entries_file.name}, "
         f"{result.manifest_file.name}"
     )

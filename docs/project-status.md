@@ -62,7 +62,7 @@ Consulte o [modelo de domínio](domain-model.md), as
 - CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
   erros esperados.
 - Manifesto JSON determinístico com versões, parâmetros, contagens, tamanhos e
-  checksums SHA-256 dos sete CSVs, além de invariantes contábeis e resumos de
+  checksums SHA-256 dos oito CSVs, além de invariantes contábeis e resumos de
   cartões e estabelecimentos.
 - Publicação conjunta por diretório de staging irmão, com manifesto escrito por
   último e exposição do caminho final somente após sucesso integral.
@@ -90,6 +90,13 @@ Consulte o [modelo de domínio](domain-model.md), as
   adicionais imutáveis com um crédito correspondente e recomposição do limite.
 - Contrato batch `1.4.0` e gerador `0.5.0`, mantendo compras e estornos no mesmo
   `transactions.csv` e seus efeitos no ledger publicado.
+- Contrato tipado de transferências internas, geração isolada e determinística,
+  recusas planejadas ou adicionais por saldo e timestamps UTC posteriores aos
+  eventos de cartão.
+- Pares imutáveis de débito e crédito para cada transferência concluída,
+  validação de saldo sequencial e conservação do saldo agregado.
+- Contrato batch `1.5.0` e gerador `0.6.0`, com `transfers.csv`, agregados de
+  transferências no manifesto e publicação atômica dos oito CSVs.
 
 ## Testes e validações disponíveis
 
@@ -110,24 +117,24 @@ Consulte o [modelo de domínio](domain-model.md), as
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
 - Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
   datas, limites, bloqueio e schemas de cartões e estabelecimentos.
-- pytest: 150 testes passando na execução atual com Python 3.14.4.
+- pytest: 165 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
 
 ## Limitações conhecidas
 
-- Transferências ainda não foram implementadas.
-- O ledger publicado contém aberturas e débitos das compras aprovadas; saldos
+- O ledger publicado contém aberturas, compras, estornos e transferências; saldos
   continuam derivados em memória e não são publicados como entidade independente.
-- Estornos reutilizam o schema de transações; ainda não há schema de transferências.
+- Somente transferências internas imediatas em BRL são suportadas; PIX,
+  transferências externas, tarifas e agendamento permanecem fora do escopo.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir transferências como próximo incremento. Demais tipos de lançamento
-permanecem fora da etapa concluída.
+Definir o próximo incremento financeiro sem ampliar retroativamente o contrato
+de transferências internas concluído nesta etapa.
 
 ## Comandos principais
 

@@ -2,8 +2,8 @@
 
 Gerador de dados bancários inteiramente sintéticos para exercícios de engenharia
 de dados no Databricks. O projeto gera clientes, endereços, contas, cartões de
-débito, estabelecimentos, tentativas de compra e lançamentos contábeis em um
-conjunto batch com sete CSVs e manifesto de integridade.
+débito, estabelecimentos, compras, estornos, transferências internas e
+lançamentos contábeis em um conjunto batch com oito CSVs e manifesto.
 
 ## Requisitos
 
@@ -46,11 +46,11 @@ python -m banking_data_generator --config configs/default.yaml
 Use `--project-root` quando a raiz desejada não for o diretório atual. A CLI
 carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 `addresses.csv`, `accounts.csv`, `cards.csv`, `merchants.csv`,
-`transactions.csv`, `ledger_entries.csv` e `manifest.json` no diretório
+`transactions.csv`, `transfers.csv`, `ledger_entries.csv` e `manifest.json` no diretório
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.4.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.5.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 ## Configuração
 
@@ -71,5 +71,6 @@ Clientes, endereços, contas, cartões exclusivamente de débito, estabeleciment
 schemas PyArrow, publicação batch atômica com manifesto, pipeline e CLI estão
 implementados. Compras aprovadas geram débitos; recusas não alteram saldo nem
 limite diário. Estornos integrais são eventos separados que geram créditos e
-restauram saldo e limite. Transferências permanecem fora do escopo atual.
+restauram saldo e limite. Transferências internas concluídas geram um débito e
+um crédito de mesmo valor; recusas não alteram o ledger e o total é conservado.
 Os cartões não contêm PAN, CVV, senha ou outra credencial bancária.

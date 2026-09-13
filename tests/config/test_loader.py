@@ -42,6 +42,11 @@ def test_loads_default_config_with_typed_values() -> None:
     assert config.transactions.purchase_amount.min == Decimal("1.00")
     assert config.transactions.purchase_amount.max == Decimal("500.00")
     assert config.transactions.history_days == 365
+    assert config.transfers.count == 10000
+    assert config.transfers.min_amount == Decimal("10.00")
+    assert config.transfers.max_amount == Decimal("1000.00")
+    assert config.transfers.declined_rate_overall == Decimal("0.03")
+    assert config.transfers.history_days == 365
 
 
 def test_rejects_missing_config_file(tmp_path: Path) -> None:
@@ -112,6 +117,7 @@ def test_rejects_empty_output_directory(
         ),
         ("merchants", "count", "propriedades obrigatórias ausentes: count"),
         ("cards", "per_account", "propriedades obrigatórias ausentes: per_account"),
+        ("transfers", "count", "propriedades obrigatórias ausentes: count"),
     ],
 )
 def test_rejects_missing_required_fields(
@@ -139,6 +145,55 @@ def test_rejects_unknown_nested_property(
     transactions["unexpected"] = True
 
     with pytest.raises(ConfigError, match="propriedades desconhecidas: unexpected"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_unknown_transfer_property(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    transfers = config["transfers"]
+    assert isinstance(transfers, dict)
+    transfers["destination"] = "external"
+
+    with pytest.raises(ConfigError, match="propriedades desconhecidas: destination"):
+        load_config(write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("count", -1),
+        ("history_days", 0),
+        ("declined_rate_overall", 1.01),
+        ("min_amount", "0.00"),
+        ("min_amount", 10.0),
+    ],
+)
+def test_rejects_invalid_transfer_configuration(
+    tmp_path: Path,
+    valid_config: dict[str, object],
+    field: str,
+    value: object,
+) -> None:
+    config = deepcopy(valid_config)
+    transfers = config["transfers"]
+    assert isinstance(transfers, dict)
+    transfers[field] = value
+
+    with pytest.raises(ConfigError, match=f"transfers.{field}"):
+        load_config(write_config(tmp_path, config))
+
+
+def test_rejects_inverted_transfer_amount_range(
+    tmp_path: Path, valid_config: dict[str, object]
+) -> None:
+    config = deepcopy(valid_config)
+    transfers = config["transfers"]
+    assert isinstance(transfers, dict)
+    transfers["min_amount"] = "1000.01"
+
+    with pytest.raises(ConfigError, match="deve ser menor ou igual"):
         load_config(write_config(tmp_path, config))
 
 

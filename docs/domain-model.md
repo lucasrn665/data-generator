@@ -1,8 +1,8 @@
 # Modelo de domínio
 
 Este documento delimita o modelo do gerador. Clientes, endereços, contas,
-cartões de débito, estabelecimentos e o ledger de abertura estão implementados;
-as demais entidades permanecem planejadas.
+cartões de débito, estabelecimentos, transações, transferências e ledger estão
+implementados; as demais entidades permanecem planejadas.
 
 ## Entidades previstas
 
@@ -24,8 +24,9 @@ as demais entidades permanecem planejadas.
   aprovadas ou recusadas; aprovações possuem débito e recusas não possuem
   lançamento. Estornos concluídos referenciam uma compra aprovada e possuem um
   crédito integral. Nenhum evento contém PAN ou credenciais.
-- **Transferência**: movimentação consistente entre uma conta de origem e uma
-  conta de destino.
+- **Transferência**: tentativa interna imutável entre contas distintas. Uma
+  conclusão gera débito na origem e crédito equivalente no destino; uma recusa
+  não gera lançamentos.
 - **Saldo**: posição monetária calculada, nunca atualizada por efeito colateral,
   como créditos menos débitos de uma conta.
 
@@ -44,7 +45,8 @@ uma transação anterior. Clientes, endereços e contas possuem schemas PyArrow
 explícitos; os lançamentos também possuem schema explícito e são publicados em
 `ledger_entries.csv`. Cartões e estabelecimentos são publicados em `cards.csv`
 e `merchants.csv`. Os schemas das demais entidades serão definidos antes de
-suas implementações.
+suas implementações. Transferências possuem schema explícito e são publicadas
+em `transfers.csv`.
 Compras e estornos são publicados em `transactions.csv`;
 `original_transaction_id` é nulo em compras e obrigatório em estornos.
 

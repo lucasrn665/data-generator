@@ -18,6 +18,9 @@ from banking_data_generator.domain.enums import (
     MerchantStatus,
     TransactionStatus,
     TransactionType,
+    TransferDeclineReason,
+    TransferStatus,
+    TransferType,
 )
 
 
@@ -124,3 +127,20 @@ class Transaction:
     ingested_at: datetime
     decline_reason: DeclineReason | None
     original_transaction_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class Transfer:
+    """Tentativa imutável de transferência entre contas internas."""
+
+    transfer_id: str
+    source_account_id: str
+    destination_account_id: str
+    transfer_type: TransferType
+    status: TransferStatus
+    amount: Decimal
+    currency: str
+    effective_at: datetime
+    event_at: datetime
+    ingested_at: datetime
+    decline_reason: TransferDeclineReason | None
