@@ -66,10 +66,15 @@ class AzureAdlsDestination:
                 f"{final}.staging-SYN-{manifest['seed']}-{manifest['reference_date']}"
             )
             final_exists = _directory_exists(filesystem, final)
-            if final_exists and not overwrite:
+            if final_exists:
                 if _remote_matches(filesystem, final, manifest):
                     return RemotePublicationResult(
                         "idempotent", final, len(manifest["files"])
+                    )
+                if overwrite:
+                    raise RemotePublicationError(
+                        "substituição ADLS não é suportada com segurança pelo SDK; "
+                        "preserve o destino existente ou use um novo caminho"
                     )
                 raise RemotePublicationError(
                     f"publicação remota divergente já existe em '{final}'"
@@ -82,10 +87,8 @@ class AzureAdlsDestination:
             _upload_file(directory, "manifest.json", local_directory / "manifest.json")
             if not _remote_matches(filesystem, staging, manifest):
                 raise RemotePublicationError("validação remota do staging falhou")
-            directory.rename_directory(final, overwrite=overwrite)
-            return RemotePublicationResult(
-                "replaced" if final_exists else "created", final, len(filenames) + 1
-            )
+            directory.rename_directory(final)
+            return RemotePublicationResult("created", final, len(filenames) + 1)
         except RemotePublicationError:
             _cleanup_remote_staging(locals().get("filesystem"), locals().get("staging"))
             raise

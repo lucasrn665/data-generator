@@ -47,8 +47,8 @@ class _Directory:
             raise type("ResourceNotFoundError", (Exception,), {})()
         return {}
 
-    def rename_directory(self, final: str, overwrite: bool = False) -> None:
-        if final in self.filesystem.directories and not overwrite:
+    def rename_directory(self, final: str) -> None:
+        if final in self.filesystem.directories:
             raise RuntimeError("conflict")
         self.filesystem.directories[final] = self.filesystem.directories.pop(self.path)
 
