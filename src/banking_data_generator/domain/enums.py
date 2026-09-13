@@ -30,6 +30,7 @@ class LedgerEntryType(StrEnum):
 
     OPENING_BALANCE = "opening_balance"
     CARD_PURCHASE = "card_purchase"
+    CARD_PURCHASE_REVERSAL = "card_purchase_reversal"
 
 
 class EntryDirection(StrEnum):
@@ -88,11 +89,13 @@ MERCHANT_CATEGORY_CODES: dict[MerchantCategory, str] = {
 
 class TransactionType(StrEnum):
     CARD_PURCHASE = "card_purchase"
+    CARD_PURCHASE_REVERSAL = "card_purchase_reversal"
 
 
 class TransactionStatus(StrEnum):
     APPROVED = "approved"
     DECLINED = "declined"
+    COMPLETED = "completed"
 
 
 class DeclineReason(StrEnum):

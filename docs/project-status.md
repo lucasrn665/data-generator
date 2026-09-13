@@ -86,6 +86,10 @@ Consulte o [modelo de domínio](domain-model.md), as
   diário recalculável e débitos apenas para aprovações.
 - Contrato batch `1.3.0`, gerador `0.4.0`, com `transactions.csv`, agregados no
   manifesto e reconciliação do saldo final pelo ledger completo.
+- Estornos integrais determinísticos de compras aprovadas, como eventos
+  adicionais imutáveis com um crédito correspondente e recomposição do limite.
+- Contrato batch `1.4.0` e gerador `0.5.0`, mantendo compras e estornos no mesmo
+  `transactions.csv` e seus efeitos no ledger publicado.
 
 ## Testes e validações disponíveis
 
@@ -106,24 +110,24 @@ Consulte o [modelo de domínio](domain-model.md), as
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
 - Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
   datas, limites, bloqueio e schemas de cartões e estabelecimentos.
-- pytest: 138 testes passando na execução atual com Python 3.14.4.
+- pytest: 150 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
 
 ## Limitações conhecidas
 
-- Estornos e transferências ainda não foram implementados.
+- Transferências ainda não foram implementadas.
 - O ledger publicado contém aberturas e débitos das compras aprovadas; saldos
   continuam derivados em memória e não são publicados como entidade independente.
-- Ainda não existem schemas PyArrow para estornos e transferências.
+- Estornos reutilizam o schema de transações; ainda não há schema de transferências.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Implementar estornos integrais na etapa 9B. Transferências e demais tipos de
-lançamento permanecem fora da etapa concluída.
+Definir transferências como próximo incremento. Demais tipos de lançamento
+permanecem fora da etapa concluída.
 
 ## Comandos principais
 

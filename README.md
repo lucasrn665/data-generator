@@ -50,7 +50,7 @@ carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.3.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.4.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 ## Configuração
 
@@ -70,5 +70,6 @@ referência e seed. Toda geração recebe uma seed.
 Clientes, endereços, contas, cartões exclusivamente de débito, estabelecimentos,
 schemas PyArrow, publicação batch atômica com manifesto, pipeline e CLI estão
 implementados. Compras aprovadas geram débitos; recusas não alteram saldo nem
-limite diário. Estornos e transferências permanecem fora do escopo atual.
+limite diário. Estornos integrais são eventos separados que geram créditos e
+restauram saldo e limite. Transferências permanecem fora do escopo atual.
 Os cartões não contêm PAN, CVV, senha ou outra credencial bancária.

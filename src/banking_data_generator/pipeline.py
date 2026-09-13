@@ -28,11 +28,14 @@ from banking_data_generator.generation import (
     generate_cards,
     generate_customers,
     generate_merchants,
+    generate_purchase_reversals,
 )
 from banking_data_generator.validation import (
-    reconcile_purchase_balances,
+    calculate_net_daily_consumption,
+    reconcile_reversal_balances,
     validate_card_purchases,
     validate_cards_and_merchants,
+    validate_purchase_reversals,
 )
 
 
@@ -58,12 +61,17 @@ class BatchPipelineResult:
     account_count: int
     card_count: int
     merchant_count: int
-    transaction_count: int
+    purchase_attempt_count: int
     approved_transaction_count: int
     declined_transaction_count: int
     target_decline_count: int
     planned_decline_count: int
     additional_decline_count: int
+    reversal_target_count: int
+    reversal_count: int
+    transaction_event_count: int
+    reversed_amount_total: Decimal
+    final_balance_total: Decimal
     ledger_entry_count: int
     opening_credit_total: Decimal
     seed: int
@@ -95,12 +103,32 @@ def run_batch_pipeline(
         purchases.transactions,
         purchases.ledger_entries,
     )
+    reversal_result = generate_purchase_reversals(purchases.transactions, config)
+    validate_purchase_reversals(
+        config,
+        purchases.transactions,
+        reversal_result.reversals,
+        reversal_result.ledger_entries,
+    )
+    calculate_net_daily_consumption(
+        cards, purchases.transactions, reversal_result.reversals
+    )
+    transaction_events = sorted(
+        [*purchases.transactions, *reversal_result.reversals],
+        key=lambda item: (item.effective_at, item.transaction_id),
+    )
     ledger_entries = sort_ledger_entries(
-        [*generate_opening_entries(accounts), *purchases.ledger_entries]
+        [
+            *generate_opening_entries(accounts),
+            *purchases.ledger_entries,
+            *reversal_result.ledger_entries,
+        ]
     )
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
-    reconcile_purchase_balances(accounts, purchases.transactions, balances)
+    reconcile_reversal_balances(
+        accounts, purchases.transactions, reversal_result.reversals, balances
+    )
     opening_credit_total = sum(
         (
             entry.amount
@@ -118,7 +146,7 @@ def run_batch_pipeline(
         ledger_entries,
         cards=cards,
         merchants=merchants,
-        transactions=purchases.transactions,
+        transactions=transaction_events,
         project_root=project_root,
     )
     return BatchPipelineResult(
@@ -136,7 +164,7 @@ def run_batch_pipeline(
         account_count=len(accounts),
         card_count=len(cards),
         merchant_count=len(merchants),
-        transaction_count=len(purchases.transactions),
+        purchase_attempt_count=len(purchases.transactions),
         approved_transaction_count=sum(
             transaction.status.value == "approved"
             for transaction in purchases.transactions
@@ -148,6 +176,13 @@ def run_batch_pipeline(
         target_decline_count=purchases.target_declines,
         planned_decline_count=purchases.planned_declines,
         additional_decline_count=purchases.additional_declines,
+        reversal_target_count=reversal_result.target_reversals,
+        reversal_count=len(reversal_result.reversals),
+        transaction_event_count=len(transaction_events),
+        reversed_amount_total=sum(
+            (item.amount for item in reversal_result.reversals), Decimal("0.00")
+        ),
+        final_balance_total=sum(balances.values(), Decimal("0.00")),
         ledger_entry_count=len(ledger_entries),
         opening_credit_total=opening_credit_total,
         seed=config.seed,

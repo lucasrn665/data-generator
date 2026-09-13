@@ -26,6 +26,8 @@ posteriores.
 - motivos coerentes e obrigatórios somente para compras recusadas;
 - limite diário recalculável apenas pelas compras aprovadas;
 - vínculo válido entre estorno e transação original;
+- no máximo um crédito integral de estorno para cada compra aprovada selecionada;
+- saldo e consumo diário líquido reconciliados após estornos, nunca negativos;
 - igualdade entre débito e crédito de uma transferência;
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.

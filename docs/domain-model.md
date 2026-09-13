@@ -20,9 +20,10 @@ as demais entidades permanecem planejadas.
 - **Estabelecimento**: recebedor sintético, sem CNPJ ou identificador oficial.
   As categorias fechadas são `grocery`, `restaurant`, `pharmacy`, `fuel` e
   `retail`, pareadas respectivamente a códigos sintéticos `SYN-MCC-*`.
-- **Transação**: tentativa imutável de compra com cartão, aprovada ou recusada.
-  Aprovações possuem um débito correspondente; recusas possuem motivo e nenhum
-  lançamento. Não contém PAN nem credenciais.
+- **Transação**: evento imutável de compra ou estorno integral. Compras podem ser
+  aprovadas ou recusadas; aprovações possuem débito e recusas não possuem
+  lançamento. Estornos concluídos referenciam uma compra aprovada e possuem um
+  crédito integral. Nenhum evento contém PAN ou credenciais.
 - **Transferência**: movimentação consistente entre uma conta de origem e uma
   conta de destino.
 - **Saldo**: posição monetária calculada, nunca atualizada por efeito colateral,
@@ -44,8 +45,8 @@ explícitos; os lançamentos também possuem schema explícito e são publicados
 `ledger_entries.csv`. Cartões e estabelecimentos são publicados em `cards.csv`
 e `merchants.csv`. Os schemas das demais entidades serão definidos antes de
 suas implementações.
-As tentativas são publicadas em `transactions.csv`; `original_transaction_id`
-permanece nulo até a implementação de estornos.
+Compras e estornos são publicados em `transactions.csv`;
+`original_transaction_id` é nulo em compras e obrigatório em estornos.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por
 seed e incapazes de representar deliberadamente pessoas ou instrumentos reais.

@@ -55,9 +55,12 @@ from banking_data_generator.export.tables import (
 )
 from banking_data_generator.generation import generate_cards, generate_merchants
 from banking_data_generator.validation import (
+    calculate_net_daily_consumption,
     reconcile_purchase_balances,
+    reconcile_reversal_balances,
     validate_card_purchases,
     validate_cards_and_merchants,
+    validate_purchase_reversals,
 )
 from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
 
@@ -101,13 +104,30 @@ def write_batch_csv(
         for entry in ledger_entries
         if entry.entry_type is LedgerEntryType.CARD_PURCHASE
     ]
+    reversal_entries = [
+        entry
+        for entry in ledger_entries
+        if entry.entry_type is LedgerEntryType.CARD_PURCHASE_REVERSAL
+    ]
+    purchases = [
+        item for item in transactions if item.transaction_type.value == "card_purchase"
+    ]
+    reversals = [
+        item
+        for item in transactions
+        if item.transaction_type.value == "card_purchase_reversal"
+    ]
     validate_card_purchases(
-        config, accounts, cards, merchants, transactions, purchase_entries
+        config, accounts, cards, merchants, purchases, purchase_entries
     )
+    validate_purchase_reversals(config, purchases, reversals, reversal_entries)
+    net_daily_consumption = calculate_net_daily_consumption(cards, purchases, reversals)
     validate_ledger(accounts, ledger_entries)
     balances = calculate_all_account_balances(accounts, ledger_entries)
-    if purchase_entries:
-        reconcile_purchase_balances(accounts, transactions, balances)
+    if reversals:
+        reconcile_reversal_balances(accounts, purchases, reversals, balances)
+    elif purchase_entries:
+        reconcile_purchase_balances(accounts, purchases, balances)
     else:
         reconcile_opening_balances(accounts, balances)
     opening_entries = [
@@ -157,12 +177,12 @@ def write_batch_csv(
     }
     approved = [
         transaction
-        for transaction in transactions
+        for transaction in purchases
         if transaction.status.value == "approved"
     ]
     declined = [
         transaction
-        for transaction in transactions
+        for transaction in purchases
         if transaction.status.value == "declined"
     ]
     target_declines = int(
@@ -177,10 +197,15 @@ def write_batch_csv(
     )
     approved_total = sum((item.amount for item in approved), Decimal("0.00"))
     declined_total = sum((item.amount for item in declined), Decimal("0.00"))
+    reversed_total = sum((item.amount for item in reversals), Decimal("0.00"))
+    reversal_credit_total = sum(
+        (item.amount for item in reversal_entries), Decimal("0.00")
+    )
+    net_daily_total = sum(net_daily_consumption.values(), Decimal("0.00"))
     transaction_summary: dict[str, Any] = {
-        "attempt_count": len(transactions),
-        "approved_count": len(approved),
-        "declined_count": len(declined),
+        "purchase_attempt_count": len(purchases),
+        "approved_purchase_count": len(approved),
+        "declined_purchase_count": len(declined),
         "target_decline_count": target_declines,
         "planned_decline_count": reason_counts["synthetic_risk_rule"],
         "additional_decline_count": len(declined)
@@ -191,6 +216,17 @@ def write_batch_csv(
         "new_ledger_debit_count": len(purchase_entries),
         "final_balance_total": f"{sum(balances.values(), Decimal('0.00')):.2f}",
         "reconciliation_failure_count": 0,
+        "reversal_target_count": int(
+            (
+                Decimal(len(approved)) * config.transactions.reversal_rate_of_approved
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        ),
+        "reversal_count": len(reversals),
+        "transaction_event_count": len(transactions),
+        "reversed_amount_total": f"{reversed_total:.2f}",
+        "reversal_ledger_credit_count": len(reversal_entries),
+        "reversal_ledger_credit_total": f"{reversal_credit_total:.2f}",
+        "net_daily_consumption_total": f"{net_daily_total:.2f}",
     }
     tables = {
         "customers.csv": customers_to_table(customers),

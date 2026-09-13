@@ -42,8 +42,11 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   real e são contabilizadas como recusas adicionais.
 - `event_at` e `ingested_at` são atrasos determinísticos curtos em relação a
   `effective_at`; eventos atrasados de negócio ainda não são gerados.
-- Cada transação aprovada pode receber no máximo um estorno, que deve referenciar
-  a transação original, ser integral e compensar seu efeito.
+- Cada compra aprovada pode receber no máximo um estorno concluído, selecionado
+  por seed própria e cota `ROUND_HALF_UP`. O estorno é integral, referencia a
+  compra imutável, gera um crédito e recompõe saldo e consumo no dia da compra.
+- `transactions.count` conta somente tentativas de compra. Estornos são eventos
+  adicionais: total de eventos é tentativas mais estornos.
 - Transferências geram efeitos equivalentes e opostos na origem e no destino.
 - Saldos são reconciliáveis com as movimentações aprovadas.
 - O diretório padrão de saída é `data/output`. Caminhos relativos são resolvidos

@@ -22,7 +22,11 @@ def pipeline_config() -> BankingDataGeneratorConfig:
         config,
         output=replace(config.output, directory=Path("output")),
         customers=replace(config.customers, count=10),
-        transactions=replace(config.transactions, count=30),
+        transactions=replace(
+            config.transactions,
+            count=30,
+            reversal_rate_of_approved=Decimal("0.50"),
+        ),
     )
 
 
@@ -40,7 +44,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.3.0"
+        / "schema_version=1.4.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -54,22 +58,26 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.transactions_file.is_file()
     assert result.manifest_file.is_file()
     assert result.ledger_entry_count == (
-        result.account_count + result.approved_transaction_count
+        result.account_count + result.approved_transaction_count + result.reversal_count
     )
     assert result.opening_credit_total > Decimal("0.00")
     assert result.card_count == result.account_count * pipeline_config.cards.per_account
     assert result.merchant_count == pipeline_config.merchants.count
-    assert result.transaction_count == pipeline_config.transactions.count
+    assert result.purchase_attempt_count == pipeline_config.transactions.count
     assert (
         result.approved_transaction_count + result.declined_transaction_count
-        == result.transaction_count
+        == result.purchase_attempt_count
     )
     assert (
         result.planned_decline_count + result.additional_decline_count
         == result.declined_transaction_count
     )
-    assert result.generator_version == "0.4.0"
-    assert result.schema_version == "1.3.0"
+    assert result.transaction_event_count == (
+        result.purchase_attempt_count + result.reversal_count
+    )
+    assert result.reversal_count == result.reversal_target_count
+    assert result.generator_version == "0.5.0"
+    assert result.schema_version == "1.4.0"
     assert result.created is True
     assert {path.name for path in result.output_directory.iterdir()} == {
         "customers.csv",
@@ -85,7 +93,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         transaction_rows = list(csv.DictReader(file))
     with result.ledger_entries_file.open(encoding="utf-8", newline="") as file:
         ledger_rows = list(csv.DictReader(file))
-    assert len(transaction_rows) == result.transaction_count
+    assert len(transaction_rows) == result.transaction_event_count
     assert {row["account_id"] for row in transaction_rows} <= {
         row["account_id"] for row in ledger_rows
     }
@@ -97,13 +105,28 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         for row in ledger_rows
         if row["entry_type"] == "card_purchase"
     }
+    purchase_rows = [
+        row for row in transaction_rows if row["transaction_type"] == "card_purchase"
+    ]
+    reversal_rows = [
+        row
+        for row in transaction_rows
+        if row["transaction_type"] == "card_purchase_reversal"
+    ]
+    assert all(row["original_transaction_id"] == "" for row in purchase_rows)
+    assert all(row["original_transaction_id"] in approved_ids for row in reversal_rows)
     manifest = json.loads(result.manifest_file.read_text(encoding="utf-8"))
     summary = manifest["transaction_summary"]
-    assert summary["attempt_count"] == result.transaction_count
-    assert summary["approved_count"] == result.approved_transaction_count
-    assert summary["declined_count"] == result.declined_transaction_count
+    assert summary["purchase_attempt_count"] == result.purchase_attempt_count
+    assert summary["approved_purchase_count"] == result.approved_transaction_count
+    assert summary["declined_purchase_count"] == result.declined_transaction_count
     assert summary["new_ledger_debit_count"] == result.approved_transaction_count
     assert summary["reconciliation_failure_count"] == 0
+    assert summary["reversal_target_count"] == result.reversal_target_count
+    assert summary["reversal_count"] == result.reversal_count
+    assert summary["transaction_event_count"] == result.transaction_event_count
+    assert summary["reversal_ledger_credit_count"] == result.reversal_count
+    assert summary["reversed_amount_total"] == f"{result.reversed_amount_total:.2f}"
     for field in (
         "approved_amount_total",
         "declined_amount_total",
@@ -159,7 +182,7 @@ def test_reconciliation_failure_happens_before_publication(
 
     monkeypatch.setattr(
         pipeline_module,
-        "reconcile_purchase_balances",
+        "reconcile_reversal_balances",
         fail_reconciliation,
     )
 

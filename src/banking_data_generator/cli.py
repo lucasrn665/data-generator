@@ -17,6 +17,7 @@ from banking_data_generator.pipeline import (
 )
 from banking_data_generator.validation import (
     ExtendedDomainValidationError,
+    ReversalValidationError,
     TransactionValidationError,
 )
 
@@ -67,6 +68,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         DatasetValidationError,
         ExtendedDomainValidationError,
         TransactionValidationError,
+        ReversalValidationError,
         ManifestValidationError,
         UnsafeOutputPath,
         OSError,
@@ -89,12 +91,17 @@ def print_success_summary(result: BatchPipelineResult) -> None:
     print(f"contas: {result.account_count}")
     print(f"cartões: {result.card_count}")
     print(f"estabelecimentos: {result.merchant_count}")
-    print(f"tentativas de compra: {result.transaction_count}")
+    print(f"tentativas de compra: {result.purchase_attempt_count}")
     print(f"compras aprovadas: {result.approved_transaction_count}")
     print(f"compras recusadas: {result.declined_transaction_count}")
     print(f"meta de recusas: {result.target_decline_count}")
     print(f"recusas planejadas: {result.planned_decline_count}")
     print(f"recusas adicionais: {result.additional_decline_count}")
+    print(f"meta de estornos: {result.reversal_target_count}")
+    print(f"estornos efetivos: {result.reversal_count}")
+    print(f"eventos de transação: {result.transaction_event_count}")
+    print(f"valor estornado: {result.reversed_amount_total:.2f} BRL")
+    print(f"saldo agregado final: {result.final_balance_total:.2f} BRL")
     print(f"lançamentos: {result.ledger_entry_count}")
     print(f"créditos de abertura: {result.opening_credit_total:.2f} BRL")
     print(f"versão do gerador: {result.generator_version}")

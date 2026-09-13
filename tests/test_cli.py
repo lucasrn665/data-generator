@@ -71,8 +71,13 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     assert "meta de recusas:" in captured.out
     assert "recusas planejadas:" in captured.out
     assert "recusas adicionais:" in captured.out
-    assert "versão do gerador: 0.4.0" in captured.out
-    assert "versão do schema: 1.3.0" in captured.out
+    assert "meta de estornos:" in captured.out
+    assert "estornos efetivos:" in captured.out
+    assert "eventos de transação:" in captured.out
+    assert "valor estornado:" in captured.out
+    assert "saldo agregado final:" in captured.out
+    assert "versão do gerador: 0.5.0" in captured.out
+    assert "versão do schema: 1.4.0" in captured.out
     assert "publicação: criada" in captured.out
     assert (
         "merchants.csv, transactions.csv, ledger_entries.csv, manifest.json"
@@ -83,7 +88,7 @@ def test_valid_cli_run_prints_summary_and_preserves_cwd(
     directory = (
         cli_project
         / "output"
-        / "schema_version=1.3.0"
+        / "schema_version=1.4.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
