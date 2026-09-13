@@ -95,6 +95,7 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
         "cards.csv",
         "merchants.csv",
         "transactions.csv",
+        "transaction_labels.csv",
         "transfers.csv",
         "ledger_entries.csv",
     }
@@ -114,6 +115,7 @@ def test_manifest_is_deterministic_complete_and_contains_no_records(
         "cards.csv": len(accounts) * config.cards.per_account,
         "merchants.csv": config.merchants.count,
         "transactions.csv": 0,
+        "transaction_labels.csv": 0,
         "transfers.csv": 0,
         "ledger_entries.csv": len(accounts),
     }
@@ -160,7 +162,7 @@ def test_failure_in_each_phase_never_exposes_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.5.0"
+        / "schema_version=1.6.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -224,7 +226,7 @@ def test_rejects_missing_existing_ledger(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.ledger_entries.unlink()
 
-    with pytest.raises(ManifestValidationError, match="nove arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="dez arquivos esperados"):
         _publish(publication_data)
 
     assert not publication.paths.ledger_entries.exists()
@@ -247,7 +249,7 @@ def test_old_layout_coexists_with_new_publication(publication_data: tuple) -> No
 
     assert publication.created is True
     assert marker.read_text(encoding="utf-8") == "old publication"
-    assert "schema_version=1.5.0" in publication.paths.directory.parts
+    assert "schema_version=1.6.0" in publication.paths.directory.parts
 
 
 def test_ledger_write_failure_does_not_publish_final_directory(
@@ -271,7 +273,7 @@ def test_ledger_write_failure_does_not_publish_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.5.0"
+        / "schema_version=1.6.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -301,7 +303,37 @@ def test_transfer_write_failure_does_not_publish_final_directory(
     final = (
         root
         / "exports"
-        / "schema_version=1.5.0"
+        / "schema_version=1.6.0"
+        / f"reference_date={config.reference_date.isoformat()}"
+        / f"seed={config.seed}"
+        / "scenario=valid"
+    )
+    assert not final.exists()
+    assert list(final.parent.glob(".valid.tmp-*")) == []
+
+
+def test_label_write_failure_does_not_publish_final_directory(
+    publication_data: tuple,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config, _, _, _, root = publication_data
+    original = writer_module.pa_csv.write_csv
+
+    def fail_labels(table: object, where: str, **kwargs: object) -> None:
+        if Path(where).name == "transaction_labels.csv":
+            Path(where).write_bytes(b"partial")
+            raise OSError("label write failed")
+        original(table, where, **kwargs)
+
+    monkeypatch.setattr(writer_module.pa_csv, "write_csv", fail_labels)
+
+    with pytest.raises(OSError, match="label write failed"):
+        _publish(publication_data)
+
+    final = (
+        root
+        / "exports"
+        / "schema_version=1.6.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
@@ -322,7 +354,7 @@ def test_rejects_missing_existing_file(publication_data: tuple) -> None:
     publication = _publish(publication_data)
     publication.paths.addresses.unlink()
 
-    with pytest.raises(ManifestValidationError, match="nove arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="dez arquivos esperados"):
         _publish(publication_data)
 
 
@@ -353,14 +385,14 @@ def test_rejects_preexisting_directory_without_manifest(
     final = (
         root
         / "exports"
-        / "schema_version=1.5.0"
+        / "schema_version=1.6.0"
         / f"reference_date={config.reference_date.isoformat()}"
         / f"seed={config.seed}"
         / "scenario=valid"
     )
     final.mkdir(parents=True)
 
-    with pytest.raises(ManifestValidationError, match="nove arquivos esperados"):
+    with pytest.raises(ManifestValidationError, match="dez arquivos esperados"):
         _publish(publication_data)
 
     assert final.is_dir()

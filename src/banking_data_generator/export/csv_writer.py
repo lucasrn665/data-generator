@@ -31,6 +31,7 @@ from banking_data_generator.domain.models import (
     LedgerEntry,
     Merchant,
     Transaction,
+    TransactionLabel,
     Transfer,
 )
 from banking_data_generator.export.manifest import (
@@ -52,6 +53,7 @@ from banking_data_generator.export.tables import (
     customers_to_table,
     ledger_entries_to_table,
     merchants_to_table,
+    transaction_labels_to_table,
     transactions_to_table,
     transfers_to_table,
 )
@@ -64,9 +66,14 @@ from banking_data_generator.validation import (
     validate_cards_and_merchants,
     validate_internal_transfers,
     validate_purchase_reversals,
+    validate_transaction_labels,
 )
 from banking_data_generator.validation.transfers import TransferValidationError
-from banking_data_generator.version import BATCH_SCHEMA_VERSION, GENERATOR_VERSION
+from banking_data_generator.version import (
+    BATCH_SCHEMA_VERSION,
+    GENERATOR_VERSION,
+    TRANSACTION_LABEL_VERSION,
+)
 
 _WRITE_OPTIONS = pa_csv.WriteOptions(include_header=True, delimiter=",")
 _STAGING_PREFIX = ".valid.tmp-"
@@ -92,6 +99,7 @@ def write_batch_csv(
     cards: Sequence[DebitCard] | None = None,
     merchants: Sequence[Merchant] | None = None,
     transactions: Sequence[Transaction] | None = None,
+    transaction_labels: Sequence[TransactionLabel] | None = None,
     transfers: Sequence[Transfer] | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> BatchPublicationResult:
@@ -104,6 +112,7 @@ def write_batch_csv(
         merchants = generate_merchants(config)
     validate_cards_and_merchants(config, accounts, cards, merchants)
     transactions = [] if transactions is None else transactions
+    transaction_labels = [] if transaction_labels is None else transaction_labels
     transfers = [] if transfers is None else transfers
     purchase_entries = [
         entry
@@ -123,6 +132,7 @@ def write_batch_csv(
         for item in transactions
         if item.transaction_type.value == "card_purchase_reversal"
     ]
+    validate_transaction_labels(config, accounts, transactions, transaction_labels)
     validate_card_purchases(
         config, accounts, cards, merchants, purchases, purchase_entries
     )
@@ -265,6 +275,41 @@ def write_batch_csv(
         "reversal_ledger_credit_total": f"{reversal_credit_total:.2f}",
         "net_daily_consumption_total": f"{net_daily_total:.2f}",
     }
+    label_by_id = {item.transaction_id: item for item in transaction_labels}
+    fraud_purchases = [
+        item
+        for item in purchases
+        if label_by_id[item.transaction_id].is_synthetic_fraud
+    ]
+    fraud_pattern_counts = Counter(
+        label.risk_pattern.value
+        for label in transaction_labels
+        if label.risk_pattern is not None
+    )
+    effective_fraud_rate = (
+        Decimal(len(fraud_purchases)) / Decimal(len(purchases))
+        if purchases
+        else Decimal("0")
+    )
+    fraud_label_summary: dict[str, Any] = {
+        "labeled_purchase_attempt_count": len(transaction_labels),
+        "normal_count": len(transaction_labels) - len(fraud_purchases),
+        "target_fraud_count": int(
+            (Decimal(len(purchases)) * config.transactions.fraud_rate_overall).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        ),
+        "synthetic_fraud_count": len(fraud_purchases),
+        "fraud_count_by_pattern": dict(sorted(fraud_pattern_counts.items())),
+        "approved_fraud_count": sum(
+            item.status.value == "approved" for item in fraud_purchases
+        ),
+        "declined_fraud_count": sum(
+            item.status.value == "declined" for item in fraud_purchases
+        ),
+        "effective_fraud_rate": f"{effective_fraud_rate:.6f}",
+        "label_version": TRANSACTION_LABEL_VERSION,
+    }
     completed_transfers = [
         item for item in transfers if item.status.value == "completed"
     ]
@@ -328,6 +373,7 @@ def write_batch_csv(
         "cards.csv": cards_to_table(cards),
         "merchants.csv": merchants_to_table(merchants),
         "transactions.csv": transactions_to_table(transactions),
+        "transaction_labels.csv": transaction_labels_to_table(transaction_labels),
         "transfers.csv": transfers_to_table(transfers),
         "ledger_entries.csv": ledger_entries_to_table(ledger_entries),
     }
@@ -338,6 +384,7 @@ def write_batch_csv(
         "cards": len(cards),
         "merchants": len(merchants),
         "transactions": len(transactions),
+        "transaction_labels": len(transaction_labels),
         "transfers": len(transfers),
         "ledger_entries": len(ledger_entries),
     }
@@ -358,6 +405,7 @@ def write_batch_csv(
             domain_summary,
             transaction_summary,
             transfer_summary,
+            fraud_label_summary,
         )
         _validate_staged_files(staging_directory, manifest)
         _write_manifest(staging_paths.manifest, manifest)
@@ -386,6 +434,7 @@ def _write_csv_files(
         "cards.csv": paths.cards,
         "merchants.csv": paths.merchants,
         "transactions.csv": paths.transactions,
+        "transaction_labels.csv": paths.transaction_labels,
         "transfers.csv": paths.transfers,
         "ledger_entries.csv": paths.ledger_entries,
     }
@@ -439,6 +488,7 @@ def _paths_in_directory(directory: Path) -> BatchCsvPaths:
         cards=directory / "cards.csv",
         merchants=directory / "merchants.csv",
         transactions=directory / "transactions.csv",
+        transaction_labels=directory / "transaction_labels.csv",
         transfers=directory / "transfers.csv",
         ledger_entries=directory / "ledger_entries.csv",
         manifest=directory / "manifest.json",

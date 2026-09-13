@@ -18,6 +18,7 @@ from banking_data_generator.pipeline import (
 )
 from banking_data_generator.validation import (
     ExtendedDomainValidationError,
+    FraudLabelValidationError,
     ReversalValidationError,
     TransactionValidationError,
     TransferValidationError,
@@ -32,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Construa o parser público da linha de comando."""
     parser = argparse.ArgumentParser(
         prog="python -m banking_data_generator",
-        description=("Gera o domínio bancário sintético atual em oito arquivos CSV."),
+        description=("Gera o domínio bancário sintético atual em nove arquivos CSV."),
     )
     parser.add_argument(
         "--config",
@@ -69,6 +70,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ConfigError,
         DatasetValidationError,
         ExtendedDomainValidationError,
+        FraudLabelValidationError,
         TransactionValidationError,
         ReversalValidationError,
         TransferValidationError,
@@ -122,6 +124,15 @@ def print_success_summary(result: BatchPipelineResult) -> None:
         "valor recusado em transferências: "
         f"{result.declined_transfer_amount_total:.2f} BRL"
     )
+    print(f"meta de fraude sintética: {result.target_fraud_count}")
+    print(f"fraudes sintéticas efetivas: {result.synthetic_fraud_count}")
+    print(f"fraudes aprovadas: {result.approved_fraud_count}")
+    print(f"fraudes recusadas: {result.declined_fraud_count}")
+    patterns = ", ".join(
+        f"{name}={count}"
+        for name, count in sorted(result.fraud_count_by_pattern.items())
+    )
+    print(f"fraudes por padrão: {patterns or 'nenhuma'}")
     print(f"lançamentos: {result.ledger_entry_count}")
     print(f"créditos de abertura: {result.opening_credit_total:.2f} BRL")
     print(f"versão do gerador: {result.generator_version}")
@@ -137,6 +148,7 @@ def print_success_summary(result: BatchPipelineResult) -> None:
         f"{result.cards_file.name}, "
         f"{result.merchants_file.name}, "
         f"{result.transactions_file.name}, "
+        f"{result.transaction_labels_file.name}, "
         f"{result.transfers_file.name}, "
         f"{result.ledger_entries_file.name}, "
         f"{result.manifest_file.name}"

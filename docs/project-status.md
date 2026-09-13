@@ -62,7 +62,7 @@ Consulte o [modelo de domínio](domain-model.md), as
 - CLI com `argparse`, resumo sem registros individuais e tratamento legível dos
   erros esperados.
 - Manifesto JSON determinístico com versões, parâmetros, contagens, tamanhos e
-  checksums SHA-256 dos oito CSVs, além de invariantes contábeis e resumos de
+  checksums SHA-256 dos nove CSVs, além de invariantes contábeis e resumos de
   cartões e estabelecimentos.
 - Publicação conjunta por diretório de staging irmão, com manifesto escrito por
   último e exposição do caminho final somente após sucesso integral.
@@ -97,6 +97,11 @@ Consulte o [modelo de domínio](domain-model.md), as
   validação de saldo sequencial e conservação do saldo agregado.
 - Contrato batch `1.5.0` e gerador `0.6.0`, com `transfers.csv`, agregados de
   transferências no manifesto e publicação atômica dos oito CSVs.
+- Ground truth determinístico e separado para cada tentativa original de compra,
+  com padrões `high_amount`, `rapid_velocity` e `new_account_burst`, scores
+  decimais e seed isolada.
+- Contrato batch `1.6.0`, gerador `0.7.0` e rótulos `1.0.0`, com
+  `transaction_labels.csv` integrado à publicação atômica dos nove CSVs.
 
 ## Testes e validações disponíveis
 
@@ -117,7 +122,7 @@ Consulte o [modelo de domínio](domain-model.md), as
   reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
 - Configuração, determinismo, isolamento, cardinalidade, chaves estrangeiras,
   datas, limites, bloqueio e schemas de cartões e estabelecimentos.
-- pytest: 165 testes passando na execução atual com Python 3.14.4.
+- pytest: 172 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
@@ -128,13 +133,15 @@ Consulte o [modelo de domínio](domain-model.md), as
   continuam derivados em memória e não são publicados como entidade independente.
 - Somente transferências internas imediatas em BRL são suportadas; PIX,
   transferências externas, tarifas e agendamento permanecem fora do escopo.
+- A fraude é uma classificação sintética baseada em três padrões controlados;
+  não há geolocalização impossível, identidade roubada ou modelo de ML.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir o próximo incremento financeiro sem ampliar retroativamente o contrato
-de transferências internas concluído nesta etapa.
+Implementar separadamente os próximos cenários de qualidade sem introduzir
+anomalias no conjunto válido desta etapa.
 
 ## Comandos principais
 

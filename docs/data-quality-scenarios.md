@@ -22,6 +22,11 @@ posteriores.
 - saldo derivado não negativo e reconciliado com o saldo de abertura;
 - reprodução exata de uma amostra a partir da mesma seed;
 - ausência de alteração de saldo por transações recusadas;
+- cobertura exata e exclusiva das compras originais pelo ground truth, sem
+  rótulos para estornos e sem vazamento em `transactions.csv`;
+- cota, versão, score, booleano e padrões sintéticos de fraude coerentes;
+- evidências verificáveis de `high_amount`, `rapid_velocity` e
+  `new_account_burst` antes da decisão financeira;
 - uma correspondência exata entre compras aprovadas e débitos no ledger;
 - motivos coerentes e obrigatórios somente para compras recusadas;
 - limite diário recalculável apenas pelas compras aprovadas;
@@ -35,7 +40,7 @@ posteriores.
 - reconciliação do saldo com o histórico de movimentações;
 - ausência de credenciais ou dados deliberadamente reais na saída.
 - ausência de arquivos gerados dentro de `src/` ou `.git/`.
-- presença dos oito CSVs e do manifesto em toda execução publicada;
+- presença dos nove CSVs e do manifesto em toda execução publicada;
 - correspondência entre manifesto, contagens, tamanhos e checksums SHA-256;
 - rejeição de reexecuções incompatíveis ou de publicações preexistentes
   incompletas.

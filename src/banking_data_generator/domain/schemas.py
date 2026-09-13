@@ -117,3 +117,13 @@ TRANSFER_SCHEMA = pa.schema(
         pa.field("decline_reason", pa.string(), nullable=True),
     ]
 )
+
+TRANSACTION_LABEL_SCHEMA = pa.schema(
+    [
+        pa.field("transaction_id", pa.string(), nullable=False),
+        pa.field("is_synthetic_fraud", pa.bool_(), nullable=False),
+        pa.field("risk_pattern", pa.string(), nullable=True),
+        pa.field("risk_score", pa.decimal128(5, 2), nullable=False),
+        pa.field("label_version", pa.string(), nullable=False),
+    ]
+)

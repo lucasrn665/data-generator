@@ -26,6 +26,7 @@ def pipeline_config() -> BankingDataGeneratorConfig:
             config.transactions,
             count=30,
             reversal_rate_of_approved=Decimal("0.50"),
+            fraud_rate_overall=Decimal("0.50"),
         ),
         transfers=replace(config.transfers, count=20),
     )
@@ -45,7 +46,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.5.0"
+        / "schema_version=1.6.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -57,6 +58,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.cards_file.is_file()
     assert result.merchants_file.is_file()
     assert result.transactions_file.is_file()
+    assert result.transaction_labels_file.is_file()
     assert result.transfers_file.is_file()
     assert result.manifest_file.is_file()
     assert result.ledger_entry_count == (
@@ -81,10 +83,13 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         result.purchase_attempt_count + result.reversal_count
     )
     assert result.reversal_count == result.reversal_target_count
+    assert result.labeled_purchase_count == result.purchase_attempt_count
+    assert result.synthetic_fraud_count == result.target_fraud_count == 15
+    assert result.approved_fraud_count + result.declined_fraud_count == 15
     assert result.transfer_attempt_count == 20
     assert result.completed_transfer_count + result.declined_transfer_count == 20
-    assert result.generator_version == "0.6.0"
-    assert result.schema_version == "1.5.0"
+    assert result.generator_version == "0.7.0"
+    assert result.schema_version == "1.6.0"
     assert result.created is True
     assert {path.name for path in result.output_directory.iterdir()} == {
         "customers.csv",
@@ -93,12 +98,16 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         "cards.csv",
         "merchants.csv",
         "transactions.csv",
+        "transaction_labels.csv",
         "transfers.csv",
         "ledger_entries.csv",
         "manifest.json",
     }
     with result.transactions_file.open(encoding="utf-8", newline="") as file:
-        transaction_rows = list(csv.DictReader(file))
+        reader = csv.DictReader(file)
+        transaction_rows = list(reader)
+        assert "is_synthetic_fraud" not in (reader.fieldnames or [])
+        assert "risk_pattern" not in (reader.fieldnames or [])
     with result.ledger_entries_file.open(encoding="utf-8", newline="") as file:
         ledger_rows = list(csv.DictReader(file))
     with result.transfers_file.open(encoding="utf-8", newline="") as file:
@@ -159,6 +168,12 @@ def test_complete_pipeline_writes_files_and_returns_counts(
         == transfer_summary["aggregate_balance_after_transfers"]
     )
     assert manifest["files"]["transfers.csv"]["record_count"] == 20
+    fraud_summary = manifest["fraud_label_summary"]
+    assert fraud_summary["labeled_purchase_attempt_count"] == 30
+    assert fraud_summary["synthetic_fraud_count"] == 15
+    assert fraud_summary["target_fraud_count"] == 15
+    assert fraud_summary["label_version"] == "1.0.0"
+    assert manifest["files"]["transaction_labels.csv"]["record_count"] == 30
 
 
 def test_repeated_pipeline_produces_identical_files(

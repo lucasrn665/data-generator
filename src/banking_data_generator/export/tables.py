@@ -12,6 +12,7 @@ from banking_data_generator.domain.models import (
     LedgerEntry,
     Merchant,
     Transaction,
+    TransactionLabel,
     Transfer,
 )
 from banking_data_generator.domain.schemas import (
@@ -21,6 +22,7 @@ from banking_data_generator.domain.schemas import (
     CUSTOMER_SCHEMA,
     LEDGER_ENTRY_SCHEMA,
     MERCHANT_SCHEMA,
+    TRANSACTION_LABEL_SCHEMA,
     TRANSACTION_SCHEMA,
     TRANSFER_SCHEMA,
 )
@@ -160,6 +162,21 @@ def transactions_to_table(transactions: Sequence[Transaction]) -> pa.Table:
         for transaction in transactions
     ]
     return pa.Table.from_pylist(records, schema=TRANSACTION_SCHEMA)
+
+
+def transaction_labels_to_table(labels: Sequence[TransactionLabel]) -> pa.Table:
+    """Converta o ground truth separado na ordem do contrato público."""
+    records = [
+        {
+            "transaction_id": label.transaction_id,
+            "is_synthetic_fraud": label.is_synthetic_fraud,
+            "risk_pattern": label.risk_pattern.value if label.risk_pattern else None,
+            "risk_score": label.risk_score,
+            "label_version": label.label_version,
+        }
+        for label in labels
+    ]
+    return pa.Table.from_pylist(records, schema=TRANSACTION_LABEL_SCHEMA)
 
 
 def transfers_to_table(transfers: Sequence[Transfer]) -> pa.Table:

@@ -108,6 +108,12 @@ class DeclineReason(StrEnum):
     SYNTHETIC_RISK_RULE = "synthetic_risk_rule"
 
 
+class RiskPattern(StrEnum):
+    HIGH_AMOUNT = "high_amount"
+    RAPID_VELOCITY = "rapid_velocity"
+    NEW_ACCOUNT_BURST = "new_account_burst"
+
+
 class TransferType(StrEnum):
     INTERNAL_TRANSFER = "internal_transfer"
 

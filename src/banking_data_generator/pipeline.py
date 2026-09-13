@@ -38,6 +38,7 @@ from banking_data_generator.validation import (
     validate_cards_and_merchants,
     validate_internal_transfers,
     validate_purchase_reversals,
+    validate_transaction_labels,
 )
 
 
@@ -56,6 +57,7 @@ class BatchPipelineResult:
     cards_file: Path
     merchants_file: Path
     transactions_file: Path
+    transaction_labels_file: Path
     transfers_file: Path
     ledger_entries_file: Path
     manifest_file: Path
@@ -83,6 +85,12 @@ class BatchPipelineResult:
     transfer_additional_decline_count: int
     completed_transfer_amount_total: Decimal
     declined_transfer_amount_total: Decimal
+    labeled_purchase_count: int
+    synthetic_fraud_count: int
+    target_fraud_count: int
+    approved_fraud_count: int
+    declined_fraud_count: int
+    fraud_count_by_pattern: dict[str, int]
     ledger_entry_count: int
     opening_credit_total: Decimal
     seed: int
@@ -113,6 +121,9 @@ def run_batch_pipeline(
         merchants,
         purchases.transactions,
         purchases.ledger_entries,
+    )
+    validate_transaction_labels(
+        config, accounts, purchases.transactions, purchases.labels
     )
     reversal_result = generate_purchase_reversals(purchases.transactions, config)
     validate_purchase_reversals(
@@ -182,6 +193,7 @@ def run_batch_pipeline(
         cards=cards,
         merchants=merchants,
         transactions=transaction_events,
+        transaction_labels=purchases.labels,
         transfers=transfer_result.transfers,
         project_root=project_root,
     )
@@ -193,6 +205,7 @@ def run_batch_pipeline(
         cards_file=publication.paths.cards,
         merchants_file=publication.paths.merchants,
         transactions_file=publication.paths.transactions,
+        transaction_labels_file=publication.paths.transaction_labels,
         transfers_file=publication.paths.transfers,
         ledger_entries_file=publication.paths.ledger_entries,
         manifest_file=publication.paths.manifest,
@@ -245,6 +258,30 @@ def run_batch_pipeline(
                 if item.status.value == "declined"
             ),
             Decimal("0.00"),
+        ),
+        labeled_purchase_count=len(purchases.labels),
+        synthetic_fraud_count=sum(
+            label.is_synthetic_fraud for label in purchases.labels
+        ),
+        target_fraud_count=purchases.target_fraud_count,
+        approved_fraud_count=sum(
+            label.is_synthetic_fraud and transaction.status.value == "approved"
+            for label, transaction in zip(
+                purchases.labels, purchases.transactions, strict=True
+            )
+        ),
+        declined_fraud_count=sum(
+            label.is_synthetic_fraud and transaction.status.value == "declined"
+            for label, transaction in zip(
+                purchases.labels, purchases.transactions, strict=True
+            )
+        ),
+        fraud_count_by_pattern=dict(
+            Counter(
+                label.risk_pattern.value
+                for label in purchases.labels
+                if label.risk_pattern is not None
+            )
         ),
         ledger_entry_count=len(ledger_entries),
         opening_credit_total=opening_credit_total,

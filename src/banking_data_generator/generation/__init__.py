@@ -12,6 +12,8 @@ from banking_data_generator.generation.reversals import (
 )
 from banking_data_generator.generation.transactions import (
     PurchaseGenerationResult,
+    calculate_fraud_target,
+    fraud_pattern_plan,
     generate_card_purchases,
 )
 from banking_data_generator.generation.transfers import (
@@ -28,6 +30,8 @@ __all__ = [
     "generate_merchants",
     "generate_card_purchases",
     "PurchaseGenerationResult",
+    "calculate_fraud_target",
+    "fraud_pattern_plan",
     "ReversalGenerationResult",
     "calculate_reversal_target",
     "generate_purchase_reversals",

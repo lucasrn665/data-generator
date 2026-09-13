@@ -19,6 +19,7 @@ CSV_ENTITY_FILES = {
     "cards": "cards.csv",
     "merchants": "merchants.csv",
     "transactions": "transactions.csv",
+    "transaction_labels": "transaction_labels.csv",
     "transfers": "transfers.csv",
     "ledger_entries": "ledger_entries.csv",
 }
@@ -37,6 +38,7 @@ def build_manifest(
     domain_summary: Mapping[str, Any],
     transaction_summary: Mapping[str, Any],
     transfer_summary: Mapping[str, Any],
+    fraud_label_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Construa o manifesto a partir dos CSVs já escritos e validados."""
     files = {
@@ -82,6 +84,7 @@ def build_manifest(
                 },
                 "history_days": config.transactions.history_days,
                 "declined_rate_overall": str(config.transactions.declined_rate_overall),
+                "fraud_rate_overall": str(config.transactions.fraud_rate_overall),
             },
             "transfers": {
                 "count": config.transfers.count,
@@ -99,6 +102,7 @@ def build_manifest(
         "seed": config.seed,
         "transaction_summary": dict(transaction_summary),
         "transfer_summary": dict(transfer_summary),
+        "fraud_label_summary": dict(fraud_label_summary),
     }
 
 
@@ -109,7 +113,7 @@ def serialize_manifest(manifest: Mapping[str, Any]) -> bytes:
 
 
 def validate_csv_files(directory: Path, manifest: Mapping[str, Any]) -> None:
-    """Valide presença, contagem, tamanho e checksum dos oito CSVs."""
+    """Valide presença, contagem, tamanho e checksum dos nove CSVs."""
     files = manifest.get("files")
     if not isinstance(files, dict):
         _fail("a propriedade 'files' é inválida")
@@ -161,7 +165,7 @@ def validate_existing_publication(
         _fail(f"o destino existente '{directory.name}' não é um diretório")
     actual_names = {path.name for path in directory.iterdir()}
     if actual_names != MANAGED_FILENAMES:
-        _fail("o diretório final não contém exatamente os nove arquivos esperados")
+        _fail("o diretório final não contém exatamente os dez arquivos esperados")
 
     manifest_path = directory / "manifest.json"
     existing_manifest = load_manifest(manifest_path)

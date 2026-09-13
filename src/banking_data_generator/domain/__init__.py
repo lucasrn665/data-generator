@@ -13,6 +13,7 @@ from banking_data_generator.domain.enums import (
     MerchantCategory,
     MerchantRiskProfile,
     MerchantStatus,
+    RiskPattern,
     TransactionStatus,
     TransactionType,
     TransferDeclineReason,
@@ -27,6 +28,7 @@ from banking_data_generator.domain.models import (
     LedgerEntry,
     Merchant,
     Transaction,
+    TransactionLabel,
     Transfer,
 )
 from banking_data_generator.domain.schemas import (
@@ -36,6 +38,7 @@ from banking_data_generator.domain.schemas import (
     CUSTOMER_SCHEMA,
     LEDGER_ENTRY_SCHEMA,
     MERCHANT_SCHEMA,
+    TRANSACTION_LABEL_SCHEMA,
     TRANSACTION_SCHEMA,
     TRANSFER_SCHEMA,
 )
@@ -48,6 +51,7 @@ __all__ = [
     "LEDGER_ENTRY_SCHEMA",
     "MERCHANT_SCHEMA",
     "TRANSACTION_SCHEMA",
+    "TRANSACTION_LABEL_SCHEMA",
     "TRANSFER_SCHEMA",
     "Account",
     "AccountType",
@@ -67,7 +71,9 @@ __all__ = [
     "MerchantCategory",
     "MerchantRiskProfile",
     "MerchantStatus",
+    "RiskPattern",
     "Transaction",
+    "TransactionLabel",
     "TransactionStatus",
     "TransactionType",
     "Transfer",

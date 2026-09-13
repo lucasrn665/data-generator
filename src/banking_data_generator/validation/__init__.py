@@ -4,6 +4,10 @@ from banking_data_generator.validation.cards_merchants import (
     ExtendedDomainValidationError,
     validate_cards_and_merchants,
 )
+from banking_data_generator.validation.fraud_labels import (
+    FraudLabelValidationError,
+    validate_transaction_labels,
+)
 from banking_data_generator.validation.purchases import (
     TransactionValidationError,
     reconcile_purchase_balances,
@@ -22,6 +26,7 @@ from banking_data_generator.validation.transfers import (
 
 __all__ = [
     "ExtendedDomainValidationError",
+    "FraudLabelValidationError",
     "TransactionValidationError",
     "ReversalValidationError",
     "calculate_net_daily_consumption",
@@ -29,6 +34,7 @@ __all__ = [
     "reconcile_reversal_balances",
     "validate_card_purchases",
     "validate_cards_and_merchants",
+    "validate_transaction_labels",
     "validate_purchase_reversals",
     "TransferValidationError",
     "validate_internal_transfers",

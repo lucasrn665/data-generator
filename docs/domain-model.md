@@ -24,6 +24,9 @@ implementados; as demais entidades permanecem planejadas.
   aprovadas ou recusadas; aprovações possuem débito e recusas não possuem
   lançamento. Estornos concluídos referenciam uma compra aprovada e possuem um
   crédito integral. Nenhum evento contém PAN ou credenciais.
+- **Rótulo de transação**: ground truth sintético associado exatamente a cada
+  tentativa original de compra. Não integra o evento de transação e não existe
+  para estornos. O score usa `Decimal` entre `0.00` e `100.00`.
 - **Transferência**: tentativa interna imutável entre contas distintas. Uma
   conclusão gera débito na origem e crédito equivalente no destino; uma recusa
   não gera lançamentos.
@@ -49,6 +52,8 @@ suas implementações. Transferências possuem schema explícito e são publicad
 em `transfers.csv`.
 Compras e estornos são publicados em `transactions.csv`;
 `original_transaction_id` é nulo em compras e obrigatório em estornos.
+Rótulos são publicados separadamente em `transaction_labels.csv`, com FK para
+a compra original e versão centralizada do contrato.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por
 seed e incapazes de representar deliberadamente pessoas ou instrumentos reais.

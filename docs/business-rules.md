@@ -46,6 +46,18 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   compra imutável, gera um crédito e recompõe saldo e consumo no dia da compra.
 - `transactions.count` conta somente tentativas de compra. Estornos são eventos
   adicionais: total de eventos é tentativas mais estornos.
+- A meta de fraude sintética é `transactions.count × fraud_rate_overall`, com
+  `ROUND_HALF_UP`, e aplica-se somente às compras originais, independentemente
+  do status. Cada tentativa recebe exatamente um rótulo em arquivo separado.
+- `high_amount` usa o máximo monetário configurado; `rapid_velocity` agrupa
+  tentativas no mesmo cartão em até cinco minutos; `new_account_burst` concentra
+  tentativas, na data de referência, na conta mais recentemente aberta no
+  conjunto sintético. Cada tentativa do agrupamento selecionada pela cota recebe
+  seu próprio rótulo.
+- O `risk_score` é `Decimal` entre `0.00` e `100.00`: normal usa `0.00` e os
+  padrões usam respectivamente `95.00`, `90.00` e `85.00`. O rótulo não cria
+  efeitos contábeis; compras alteradas pelos padrões são reavaliadas pelas regras
+  financeiras antes da criação de qualquer lançamento.
 - Tentativas de transferência usam uma seed própria e são ordenadas depois dos
   eventos de cartão. A cota de recusas usa `ROUND_HALF_UP`; restrições de saldo
   podem produzir recusas adicionais.
@@ -62,7 +74,7 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   `.gitignore`.
 - A exportação rejeita caminhos absolutos, escapes da raiz do projeto e
   diretórios de saída localizados dentro de `src/` ou `.git/`.
-- Uma execução válida é publicada atomicamente como um diretório contendo oito
+- Uma execução válida é publicada atomicamente como um diretório contendo nove
   CSVs e `manifest.json`. O manifesto registra versões, parâmetros, contagens,
   tamanhos e checksums SHA-256 sem dados pessoais ou valores variáveis no tempo.
 - O caminho inclui a versão do schema batch. O manifesto registra agregados

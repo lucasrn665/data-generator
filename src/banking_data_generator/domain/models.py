@@ -16,6 +16,7 @@ from banking_data_generator.domain.enums import (
     MerchantCategory,
     MerchantRiskProfile,
     MerchantStatus,
+    RiskPattern,
     TransactionStatus,
     TransactionType,
     TransferDeclineReason,
@@ -127,6 +128,17 @@ class Transaction:
     ingested_at: datetime
     decline_reason: DeclineReason | None
     original_transaction_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class TransactionLabel:
+    """Ground truth sintético separado dos eventos de transação."""
+
+    transaction_id: str
+    is_synthetic_fraud: bool
+    risk_pattern: RiskPattern | None
+    risk_score: Decimal
+    label_version: str
 
 
 @dataclass(frozen=True, slots=True)
