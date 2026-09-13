@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import banking_data_generator.pipeline as pipeline_module
+from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import BankingDataGeneratorConfig, load_config
 from banking_data_generator.pipeline import DatasetValidationError, run_batch_pipeline
 
@@ -42,6 +43,12 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.generator_version == "0.1.0"
     assert result.schema_version == "1.0.0"
     assert result.created is True
+    assert {path.name for path in result.output_directory.iterdir()} == {
+        "customers.csv",
+        "addresses.csv",
+        "accounts.csv",
+        "manifest.json",
+    }
 
 
 def test_repeated_pipeline_produces_identical_files(
@@ -75,6 +82,26 @@ def test_validation_failure_happens_before_any_write(
     monkeypatch.setattr(pipeline_module, "generate_accounts", lambda *_: [])
 
     with pytest.raises(DatasetValidationError, match="quantidade de contas"):
+        run_batch_pipeline(pipeline_config, tmp_path)
+
+    assert not (tmp_path / "output").exists()
+
+
+def test_reconciliation_failure_happens_before_publication(
+    tmp_path: Path,
+    pipeline_config: BankingDataGeneratorConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_reconciliation(*args: object) -> None:
+        raise AccountingError("simulated reconciliation failure")
+
+    monkeypatch.setattr(
+        pipeline_module,
+        "reconcile_opening_balances",
+        fail_reconciliation,
+    )
+
+    with pytest.raises(AccountingError, match="simulated reconciliation failure"):
         run_batch_pipeline(pipeline_config, tmp_path)
 
     assert not (tmp_path / "output").exists()

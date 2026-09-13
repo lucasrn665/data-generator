@@ -67,6 +67,10 @@ Consulte o [modelo de domínio](domain-model.md), as
   último e exposição do caminho final somente após sucesso integral.
 - Reexecução idempotente mediante validação exata do manifesto e dos arquivos;
   publicações divergentes nunca são sobrescritas.
+- Subledger imutável de contas com um crédito de abertura determinístico por
+  conta, valores `Decimal`, referências sintéticas e timestamps UTC.
+- Cálculo puro de saldos como créditos menos débitos e reconciliação com os
+  saldos de abertura antes da publicação batch.
 
 ## Testes e validações disponíveis
 
@@ -83,24 +87,28 @@ Consulte o [modelo de domínio](domain-model.md), as
   códigos de saída, erros conhecidos e preservação do diretório atual.
 - Manifesto, checksums, tamanhos, contagens, serialização determinística,
   publicação por staging, falhas por fase, limpeza segura e conflitos.
-- pytest: 81 testes passando na execução atual com Python 3.14.4.
+- Geração, ordenação e validação do ledger, cálculo de créditos e débitos,
+  reconciliação, timestamp UTC e compatibilidade com o schema PyArrow.
+- pytest: 96 testes passando na execução atual com Python 3.14.4.
 - Python 3.14.4 é a versão oficial de desenvolvimento e validação local. O
   pacote suporta Python `>=3.14,<3.15`.
 - Ruff: lint e verificação de formatação passando, com alvo Python 3.14.
 
 ## Limitações conhecidas
 
-- Cartões, estabelecimentos, transações, transferências, ledger e saldos atuais
-  ainda não foram implementados.
+- Cartões, estabelecimentos, transações e transferências ainda não foram
+  implementados.
+- O ledger e os saldos são validados somente em memória e ainda não fazem parte
+  do conjunto publicado nem do manifesto.
 - Ainda não existem schemas PyArrow para entidades futuras.
 - A configuração aceita somente BRL e CSV.
 - Cenários de anomalia e streaming estão apenas documentados.
 
 ## Próxima etapa planejada
 
-Definir o próximo incremento antes de implementar novas entidades. Cartões são
-um candidato natural; eventos financeiros, ledger e saldo atual permanecem
-fora da etapa concluída.
+Exportar o ledger e evoluir o contrato batch em uma etapa separada, ou definir
+cartões como próximo incremento. Compras, transferências e demais eventos
+financeiros permanecem fora da etapa concluída.
 
 ## Comandos principais
 

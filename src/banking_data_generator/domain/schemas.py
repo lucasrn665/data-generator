@@ -41,3 +41,17 @@ ACCOUNT_SCHEMA = pa.schema(
         pa.field("status", pa.string(), nullable=False),
     ]
 )
+
+LEDGER_ENTRY_SCHEMA = pa.schema(
+    [
+        pa.field("entry_id", pa.string(), nullable=False),
+        pa.field("account_id", pa.string(), nullable=False),
+        pa.field("entry_type", pa.string(), nullable=False),
+        pa.field("direction", pa.string(), nullable=False),
+        pa.field("amount", pa.decimal128(18, 2), nullable=False),
+        pa.field("currency", pa.string(), nullable=False),
+        pa.field("effective_at", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("reference_id", pa.string(), nullable=False),
+        pa.field("sequence_number", pa.int64(), nullable=False),
+    ]
+)

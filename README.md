@@ -66,4 +66,6 @@ referência e seed. Toda geração recebe uma seed.
 
 Clientes, endereços, contas, schemas PyArrow, publicação batch atômica com
 manifesto, pipeline e CLI estão implementados. Cartões, estabelecimentos,
-movimentações, ledger e saldo atual permanecem fora do escopo atual.
+movimentações e transferências permanecem fora do escopo atual. Um subledger em
+memória gera os créditos de abertura e reconcilia os saldos antes da publicação;
+seus lançamentos ainda não são exportados.

@@ -11,7 +11,9 @@ implementados; as demais entidades permanecem planejadas.
   cada cliente terá exatamente um endereço principal.
 - **Conta**: conta sintética dos tipos `checking` ou `savings`, pertencente a
   exatamente um cliente. Seu valor monetário representa o saldo de abertura; o
-  saldo atual será derivado do ledger em uma etapa posterior.
+  saldo é derivado exclusivamente do ledger.
+- **Lançamento de ledger**: registro imutável de crédito ou débito associado a
+  uma conta. Nesta etapa, existe exatamente um crédito de abertura por conta.
 - **Cartão**: instrumento sintético associado a uma conta, sem reproduzir
   números de cartões reais. A primeira versão terá somente cartões de débito;
   cartões de crédito pertencem ao roadmap futuro.
@@ -19,7 +21,8 @@ implementados; as demais entidades permanecem planejadas.
 - **Transação**: tentativa de movimentação financeira, aprovada ou recusada.
 - **Transferência**: movimentação consistente entre uma conta de origem e uma
   conta de destino.
-- **Saldo**: posição monetária derivada das movimentações válidas de uma conta.
+- **Saldo**: posição monetária calculada, nunca atualizada por efeito colateral,
+  como créditos menos débitos de uma conta.
 
 ## Relacionamentos planejados
 
@@ -32,6 +35,7 @@ Cada cliente terá entre `accounts.min_per_customer` e
 pertencerá a exatamente um cliente. Uma conta poderá possuir cartões,
 transações, transferências e saldos. Estornos deverão referenciar uma transação
 anterior. Clientes, endereços e contas possuem schemas PyArrow explícitos; os
+lançamentos também possuem schema em memória, mas ainda não são publicados. Os
 schemas das demais entidades serão definidos antes de suas implementações.
 
 Todos os identificadores e atributos deverão ser sintéticos, reproduzíveis por

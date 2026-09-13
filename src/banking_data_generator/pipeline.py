@@ -7,6 +7,12 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+from banking_data_generator.accounting import (
+    calculate_all_account_balances,
+    generate_opening_entries,
+    reconcile_opening_balances,
+    validate_ledger,
+)
 from banking_data_generator.config import BankingDataGeneratorConfig
 from banking_data_generator.domain.enums import AccountType
 from banking_data_generator.domain.models import Account, Address, Customer
@@ -51,6 +57,10 @@ def run_batch_pipeline(
     accounts = generate_accounts(customers, config)
 
     validate_dataset(config, customers, addresses, accounts)
+    ledger_entries = generate_opening_entries(accounts)
+    validate_ledger(accounts, ledger_entries)
+    balances = calculate_all_account_balances(accounts, ledger_entries)
+    reconcile_opening_balances(accounts, balances)
     publication = write_batch_csv(
         config,
         customers,

@@ -1,13 +1,15 @@
 """Modelos tipados e imutáveis do domínio inicial."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from banking_data_generator.domain.enums import (
     AccountType,
     ActivityProfile,
     EntityStatus,
+    EntryDirection,
+    LedgerEntryType,
 )
 
 
@@ -52,3 +54,18 @@ class Account:
     opening_balance: Decimal
     opened_date: date
     status: EntityStatus
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerEntry:
+    """Lançamento imutável do subledger de contas dos clientes."""
+
+    entry_id: str
+    account_id: str
+    entry_type: LedgerEntryType
+    direction: EntryDirection
+    amount: Decimal
+    currency: str
+    effective_at: datetime
+    reference_id: str
+    sequence_number: int

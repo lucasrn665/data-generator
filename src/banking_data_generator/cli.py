@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pyarrow as pa
 
+from banking_data_generator.accounting import AccountingError
 from banking_data_generator.config import ConfigError, load_config
 from banking_data_generator.export import ManifestValidationError, UnsafeOutputPath
 from banking_data_generator.pipeline import (
@@ -59,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = run_batch_pipeline(config, project_root)
     except (
         CliInputError,
+        AccountingError,
         ConfigError,
         DatasetValidationError,
         ManifestValidationError,

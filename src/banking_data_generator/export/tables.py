@@ -4,11 +4,12 @@ from collections.abc import Sequence
 
 import pyarrow as pa
 
-from banking_data_generator.domain.models import Account, Address, Customer
+from banking_data_generator.domain.models import Account, Address, Customer, LedgerEntry
 from banking_data_generator.domain.schemas import (
     ACCOUNT_SCHEMA,
     ADDRESS_SCHEMA,
     CUSTOMER_SCHEMA,
+    LEDGER_ENTRY_SCHEMA,
 )
 
 
@@ -65,3 +66,22 @@ def accounts_to_table(accounts: Sequence[Account]) -> pa.Table:
         for account in accounts
     ]
     return pa.Table.from_pylist(records, schema=ACCOUNT_SCHEMA)
+
+
+def ledger_entries_to_table(entries: Sequence[LedgerEntry]) -> pa.Table:
+    """Converta lançamentos em memória sem iniciar sua exportação CSV."""
+    records = [
+        {
+            "entry_id": entry.entry_id,
+            "account_id": entry.account_id,
+            "entry_type": entry.entry_type.value,
+            "direction": entry.direction.value,
+            "amount": entry.amount,
+            "currency": entry.currency,
+            "effective_at": entry.effective_at,
+            "reference_id": entry.reference_id,
+            "sequence_number": entry.sequence_number,
+        }
+        for entry in entries
+    ]
+    return pa.Table.from_pylist(records, schema=LEDGER_ENTRY_SCHEMA)

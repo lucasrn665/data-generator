@@ -13,6 +13,9 @@ posteriores.
 - vínculo de cada conta com exatamente um cliente e tipo de conta restrito a
   `checking` ou `savings`;
 - tipos, nulabilidade e precisão compatíveis com o esquema PyArrow;
+- exatamente um crédito de abertura positivo por conta, com moeda coerente,
+  referência sintética única e instante efetivo em UTC;
+- saldo derivado não negativo e reconciliado com o saldo de abertura;
 - reprodução exata de uma amostra a partir da mesma seed;
 - ausência de alteração de saldo por transações recusadas;
 - vínculo válido entre estorno e transação original;

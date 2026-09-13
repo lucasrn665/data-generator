@@ -23,3 +23,16 @@ class AccountType(StrEnum):
 
     CHECKING = "checking"
     SAVINGS = "savings"
+
+
+class LedgerEntryType(StrEnum):
+    """Tipos de lançamento admitidos no subledger atual."""
+
+    OPENING_BALANCE = "opening_balance"
+
+
+class EntryDirection(StrEnum):
+    """Direção contábil explícita de um lançamento."""
+
+    CREDIT = "credit"
+    DEBIT = "debit"

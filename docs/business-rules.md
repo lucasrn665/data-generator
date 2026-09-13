@@ -15,8 +15,16 @@ As regras abaixo orientam as funcionalidades implementadas e as etapas futuras.
   um.
 - Cada conta pertence a exatamente um cliente e possui o tipo `checking` ou
   `savings`.
-- O valor monetário da conta gerada é seu saldo de abertura. O saldo atual será
-  derivado do ledger em uma etapa posterior.
+- O valor monetário da conta gerada é seu saldo de abertura. Cada conta recebe
+  exatamente um lançamento de abertura positivo, em crédito e na mesma moeda.
+- O ledger atual é apenas o subledger das contas dos clientes. O crédito de
+  abertura não possui contrapartida em uma conta contábil nesta etapa; não há
+  plano de contas nem razão geral do banco.
+- O instante efetivo da abertura é `00:00:00 UTC` na `opened_date` da conta,
+  data que já é derivada deterministicamente de `reference_date`.
+- Saldos são sempre calculados como créditos menos débitos, sem estado mutável,
+  e devem reconciliar exatamente com o saldo de abertura. Transferências
+  futuras deverão gerar efeitos equivalentes e opostos entre contas.
 - Contas não podem possuir saldo negativo e, inicialmente, não haverá cheque
   especial.
 - Transações recusadas não alteram saldos.
