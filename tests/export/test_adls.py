@@ -32,6 +32,9 @@ class _Download:
     def readall(self) -> bytes:
         return self.data
 
+    def chunks(self):
+        yield self.data
+
 
 class _Directory:
     def __init__(self, filesystem: _Filesystem, path: str) -> None:
@@ -144,6 +147,9 @@ def test_adls_fake_uploads_manifest_last_and_promotes(
     class Credential:
         def __init__(self) -> None:
             credential_created.append(True)
+
+        def close(self) -> None:
+            pass
 
     class Service:
         def __init__(self, **kwargs: object) -> None:

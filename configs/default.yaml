@@ -14,6 +14,7 @@ adls:
   file_system: synthetic-data
   base_directory: banking
   overwrite: false
+  max_concurrency: 4
 
 event_hubs:
   enabled: false

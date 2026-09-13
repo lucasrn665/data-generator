@@ -1,7 +1,10 @@
 """Publicação opcional e segura de um conjunto batch no ADLS Gen2."""
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
+from time import monotonic
 from typing import Protocol
 
 from banking_data_generator.config import AdlsConfig
@@ -21,6 +24,7 @@ class RemotePublicationResult:
     state: str
     path: str
     file_count: int
+    phase_durations: dict[str, float] | None = None
 
 
 class RemoteBatchDestination(Protocol):
@@ -46,6 +50,9 @@ class AzureAdlsDestination:
         self, local_directory: Path, relative_directory: str, overwrite: bool = False
     ) -> RemotePublicationResult:
         manifest = validate_local_publication(local_directory)
+        credential = None
+        service = None
+        phase_durations: dict[str, float] = {}
         try:
             from azure.core.exceptions import AzureError, ResourceExistsError
             from azure.identity import DefaultAzureCredential
@@ -83,13 +90,22 @@ class AzureAdlsDestination:
             directory = filesystem.get_directory_client(staging)
             directory.create_directory()
             filenames = sorted(manifest["files"])
-            for filename in filenames:
-                _upload_file(directory, filename, local_directory / filename)
+            started = monotonic()
+            _upload_csv_files(
+                directory, local_directory, filenames, self.config.max_concurrency
+            )
+            phase_durations["upload"] = monotonic() - started
             _upload_file(directory, "manifest.json", local_directory / "manifest.json")
+            started = monotonic()
             if not _remote_matches(filesystem, staging, manifest):
                 raise RemotePublicationError("validação remota do staging falhou")
+            phase_durations["validation"] = monotonic() - started
+            started = monotonic()
             directory.rename_directory(new_name=f"{self.config.file_system}/{final}")
-            return RemotePublicationResult("created", final, len(filenames) + 1)
+            phase_durations["promotion"] = monotonic() - started
+            return RemotePublicationResult(
+                "created", final, len(filenames) + 1, phase_durations
+            )
         except RemotePublicationError:
             _cleanup_remote_staging(locals().get("filesystem"), locals().get("staging"))
             raise
@@ -98,6 +114,13 @@ class AzureAdlsDestination:
             raise RemotePublicationError(
                 f"falha na publicação ADLS: {error}"
             ) from error
+        finally:
+            for client in (service, credential):
+                if client is not None and hasattr(client, "close"):
+                    try:
+                        client.close()
+                    except Exception:
+                        pass
 
 
 def remote_batch_path(local_directory: Path) -> str:
@@ -152,6 +175,25 @@ def _upload_file(directory: object, filename: str, local: Path) -> None:
         client.upload_data(stream, overwrite=True)
 
 
+def _upload_csv_files(
+    directory: object, local_directory: Path, filenames: list[str], max_workers: int
+) -> None:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                _upload_file, directory, filename, local_directory / filename
+            ): filename
+            for filename in filenames
+        }
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except BaseException:
+                for pending in futures:
+                    pending.cancel()
+                raise
+
+
 def _directory_exists(filesystem: object, path: str) -> bool:
     try:
         filesystem.get_directory_client(path).get_directory_properties()
@@ -182,14 +224,21 @@ def _remote_matches(filesystem: object, path: str, manifest: dict) -> bool:
         remote_manifest = _download(directory, "manifest.json")
         if remote_manifest != serialize_manifest(manifest):
             return False
-        for filename, metadata in manifest["files"].items():
-            data = _download(directory, filename)
-            if len(data) != metadata["size_bytes"]:
-                return False
-            import hashlib
-
-            if hashlib.sha256(data).hexdigest() != metadata["sha256"]:
-                return False
+        with ThreadPoolExecutor(
+            max_workers=min(16, max(1, len(manifest["files"])))
+        ) as executor:
+            futures = {
+                executor.submit(_stream_digest, directory, filename): (
+                    filename,
+                    metadata,
+                )
+                for filename, metadata in manifest["files"].items()
+            }
+            for future in as_completed(futures):
+                _, metadata = futures[future]
+                size, digest = future.result()
+                if size != metadata["size_bytes"] or digest != metadata["sha256"]:
+                    return False
         return True
     except Exception as error:
         if error.__class__.__name__ in {"ResourceNotFoundError", "NotFoundError"}:
@@ -200,3 +249,13 @@ def _remote_matches(filesystem: object, path: str, manifest: dict) -> bool:
 def _download(directory: object, filename: str) -> bytes:
     response = directory.get_file_client(filename).download_file()
     return response.readall()
+
+
+def _stream_digest(directory: object, filename: str) -> tuple[int, str]:
+    response = directory.get_file_client(filename).download_file()
+    digest = sha256()
+    size = 0
+    for chunk in response.chunks():
+        digest.update(chunk)
+        size += len(chunk)
+    return size, digest.hexdigest()

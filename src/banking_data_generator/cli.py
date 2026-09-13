@@ -176,6 +176,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"publicação ADLS: {remote.state}")
         print(f"destino ADLS: {remote.path}")
         print(f"arquivos ADLS: {remote.file_count}")
+        if remote.phase_durations:
+            for phase in ("upload", "validation", "promotion"):
+                if phase in remote.phase_durations:
+                    print(f"ADLS {phase}: {remote.phase_durations[phase]:.3f}s")
     if event_hubs is not None:
         print(f"publicação Event Hubs: {event_hubs.state}")
         print(f"eventos planejados: {event_hubs.events_planned}")

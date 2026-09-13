@@ -42,7 +42,14 @@ _ROOT_FIELDS = {
     "quality",
 }
 _OUTPUT_FIELDS = {"directory", "format"}
-_ADLS_FIELDS = {"enabled", "account_url", "file_system", "base_directory", "overwrite"}
+_ADLS_FIELDS = {
+    "enabled",
+    "account_url",
+    "file_system",
+    "base_directory",
+    "overwrite",
+    "max_concurrency",
+}
 _EVENT_HUBS_FIELDS = {
     "enabled",
     "fully_qualified_namespace",
@@ -201,6 +208,9 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
     adls_url = _non_empty_string(adls["account_url"], "adls.account_url")
     adls_filesystem = _adls_name(adls["file_system"], "adls.file_system")
     adls_base = _relative_remote_path(adls["base_directory"], "adls.base_directory")
+    adls_max_concurrency = _bounded_int(
+        adls["max_concurrency"], "adls.max_concurrency", 1, 16
+    )
     if not adls_url.startswith("https://") or not adls_url.removesuffix("/").endswith(
         ".dfs.core.windows.net"
     ):
@@ -333,6 +343,7 @@ def load_config(path: str | Path) -> BankingDataGeneratorConfig:
             file_system=adls_filesystem,
             base_directory=adls_base,
             overwrite=_bool(adls["overwrite"], "adls.overwrite"),
+            max_concurrency=adls_max_concurrency,
         ),
         event_hubs=EventHubsConfig(
             enabled=_bool(event_hubs["enabled"], "event_hubs.enabled"),
@@ -461,6 +472,13 @@ def _positive_int(value: Any, path: str) -> int:
     return value
 
 
+def _bounded_int(value: Any, path: str, minimum: int, maximum: int) -> int:
+    result = _positive_int(value, path)
+    if result > maximum:
+        _fail(path, f"deve estar entre {minimum} e {maximum}")
+    return result
+
+
 def _money(value: Any, path: str) -> Decimal:
     if not isinstance(value, str):
         _fail(path, "deve ser uma string monetária com duas casas decimais")
@@ -551,6 +569,7 @@ def _apply_adls_environment(root: Mapping[str, Any]) -> None:
         "BANKING_GENERATOR_ADLS_FILE_SYSTEM": "file_system",
         "BANKING_GENERATOR_ADLS_BASE_DIRECTORY": "base_directory",
         "BANKING_GENERATOR_ADLS_OVERWRITE": "overwrite",
+        "BANKING_GENERATOR_ADLS_MAX_CONCURRENCY": "max_concurrency",
     }
     for variable, field in mappings.items():
         if variable in os.environ:
@@ -559,6 +578,11 @@ def _apply_adls_environment(root: Mapping[str, Any]) -> None:
                 if value.lower() not in {"true", "false"}:
                     _fail(variable, "deve ser true ou false")
                 value = value.lower() == "true"
+            elif field == "max_concurrency":
+                try:
+                    value = int(value)
+                except ValueError:
+                    _fail(variable, "deve ser inteiro")
             adls[field] = value
 
 

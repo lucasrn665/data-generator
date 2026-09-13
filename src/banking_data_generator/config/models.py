@@ -23,6 +23,7 @@ class AdlsConfig:
     file_system: str
     base_directory: str
     overwrite: bool
+    max_concurrency: int = 4
 
 
 @dataclass(frozen=True, slots=True)
