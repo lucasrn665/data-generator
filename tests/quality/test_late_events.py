@@ -77,7 +77,7 @@ def test_late_event_is_deterministic_and_manifest_is_coherent(tmp_path: Path) ->
     assert summary["observed_late_event_count"] == summary["target_late_event_count"]
     assert summary["late_threshold_seconds"] == 300
     assert summary["financial_rules_validated_before_scenario"] is True
-    assert first.output_directory.parts[-4] == "schema_version=1.7.3"
+    assert first.output_directory.parts[-4] == "schema_version=1.8.0"
 
 
 def test_canonical_timestamps_are_utc_and_operational(tmp_path: Path) -> None:

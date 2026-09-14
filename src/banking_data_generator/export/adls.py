@@ -164,8 +164,8 @@ def remote_batch_path(local_directory: Path) -> str:
         raise RemotePublicationError(
             "caminho local não contém referência e cenário"
         ) from error
-    if scenario == "valid":
-        return f"{reference}/valid"
+    if scenario in {"valid", "mixed"}:
+        return f"{reference}/{scenario}"
     return f"{reference}/invalid/{scenario}"
 
 

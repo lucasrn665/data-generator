@@ -3,10 +3,11 @@
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from banking_data_generator.domain.models import Transaction, Transfer
+from banking_data_generator.generation.context import GenerationContext
 from banking_data_generator.version import EVENT_SCHEMA_VERSION
 
 
@@ -112,6 +113,61 @@ def build_replay_events(
         )
     ordered = sorted(
         events,
+        key=lambda event: (
+            event.ingested_at,
+            event.event_at,
+            event.event_type,
+            event.event_id,
+        ),
+    )
+    return tuple(
+        replace(event, sequence_number=index) for index, event in enumerate(ordered)
+    )
+
+
+def apply_mixed_event_quality(
+    events: Sequence[EventEnvelope], seed: int
+) -> tuple[EventEnvelope, ...]:
+    """Aplique variações de representação somente ao replay misto."""
+    if not events:
+        return tuple()
+    context = GenerationContext.create(seed, "quality_scenario:mixed:events")
+    rows = list(events)
+    selected = context.random.sample(
+        range(len(rows)), min(len(rows), max(1, len(rows) // 20))
+    )
+    for offset, index in enumerate(selected):
+        event = rows[index]
+        payload = dict(event.payload)
+        mutation = offset % 8
+        if mutation == 0:
+            rows.append(event)
+        elif mutation == 1 and "merchant_id" in payload:
+            payload["merchant_id"] = f"SYN-MISSING-{offset:012d}"
+            rows[index] = replace(event, payload=payload)
+        elif mutation == 2:
+            payload.pop("merchant_id", None)
+            rows[index] = replace(event, payload=payload)
+        elif mutation == 3 and "amount" in payload:
+            payload["amount"] = f"INVALID_AMOUNT_{payload['amount']}"
+            rows[index] = replace(event, payload=payload)
+        elif mutation == 4:
+            payload["status"] = "pending_review"
+            rows[index] = replace(event, payload=payload)
+        elif mutation == 5:
+            payload["source_channel"] = ("mobile", "web", "branch")[offset % 3]
+            rows[index] = replace(event, payload=payload)
+        elif mutation == 6 and "merchant_id" in payload:
+            payload["counterparty_id"] = payload.pop("merchant_id")
+            rows[index] = replace(event, payload=payload)
+        else:
+            event_time = datetime.fromisoformat(event.event_at.replace("Z", "+00:00"))
+            rows[index] = replace(
+                event,
+                ingested_at=_timestamp(event_time + timedelta(hours=1)),
+            )
+    ordered = sorted(
+        rows,
         key=lambda event: (
             event.ingested_at,
             event.event_at,

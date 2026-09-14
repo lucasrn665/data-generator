@@ -52,6 +52,7 @@ _SCENARIOS = (
     "schema_renamed_column",
     "schema_incompatible_value",
     "schema_unknown_enum",
+    "mixed",
 )
 
 

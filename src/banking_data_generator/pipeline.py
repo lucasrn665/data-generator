@@ -23,7 +23,11 @@ from banking_data_generator.domain.enums import (
     LedgerEntryType,
 )
 from banking_data_generator.domain.models import Account, Address, Customer
-from banking_data_generator.events import EventEnvelope, build_replay_events
+from banking_data_generator.events import (
+    EventEnvelope,
+    apply_mixed_event_quality,
+    build_replay_events,
+)
 from banking_data_generator.export import write_batch_csv
 from banking_data_generator.generation import (
     generate_accounts,
@@ -233,6 +237,8 @@ def run_batch_pipeline(
         seed=config.seed,
         scenario=config.quality.scenario,
     )
+    if config.quality.scenario == "mixed":
+        replay_events = apply_mixed_event_quality(replay_events, config.seed)
     return BatchPipelineResult(
         output_directory=publication.paths.directory,
         customers_file=publication.paths.customers,

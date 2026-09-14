@@ -1,7 +1,6 @@
 # Cenários de qualidade de dados
 
-Esta é a lista inicial de cenários a serem detalhados e implementados em etapas
-posteriores.
+Esta é a lista de cenários disponíveis no contrato de qualidade `2.0.0`.
 
 ## Validações obrigatórias
 
@@ -63,6 +62,10 @@ O contrato de qualidade `1.2.0` oferece um cenário por execução:
 - `schema_incompatible_value`: substitui uma cota de valores por
   `INVALID_AMOUNT_<valor original>`;
 - `schema_unknown_enum`: substitui uma cota de status por `pending_review`.
+- `mixed`: combina silenciosamente anomalias de linhas (duplicatas, nulos,
+  FKs órfãs, atrasos e valores/enums incompatíveis) no mesmo conjunto. As
+  mutações de cabeçalho (`schema_additive_column`, `schema_missing_column` e
+  `schema_renamed_column`) permanecem isoladas.
 
 A seleção usa uma seed exclusiva por cenário. A quantidade é a contagem da
 entidade multiplicada pela taxa e arredondada com `ROUND_HALF_UP`; não existe
@@ -76,7 +79,7 @@ permitidos apenas nesses campos descritivos. FKs órfãs estão limitadas a
 `addresses.customer_id`, `accounts.customer_id`, `cards.account_id` e
 `transactions.merchant_id`.
 
-Cada cenário fica em `scenario=<nome>` sob o schema `1.7.2`; o manifesto registra
+Cada cenário fica em `scenario=<nome>` sob o schema `1.8.0`; o manifesto registra
 contagens original/publicada, seleção, linhas adicionais, chaves duplicadas,
 tipo e quantidade esperada de violações e confirmação da validação canônica.
 
@@ -91,3 +94,9 @@ aplicadas após a validação canônica. CSV não possui tipos físicos; a muta�
 valor representa a incompatibilidade com o `decimal128(18, 2)` esperado pelo
 consumidor. O modelo, os schemas canônicos e as regras financeiras não são
 flexibilizados.
+
+O cenário `mixed` deriva do conjunto canônico já validado, mantém a maioria das
+linhas válidas e usa relatório interno apenas para validação/testes. O manifesto
+não expõe IDs nem contagens por defeito. No Event Hubs, JSONs válidos podem ter
+estruturas diferentes no mesmo replay; consumidores devem detectar, quarentenar,
+deduplicar e reconciliar essas mensagens em camadas Bronze.

@@ -48,7 +48,7 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.output_directory == (
         tmp_path
         / "output"
-        / "schema_version=1.7.3"
+        / "schema_version=1.8.0"
         / "reference_date=2026-01-01"
         / "seed=42"
         / "scenario=valid"
@@ -90,8 +90,8 @@ def test_complete_pipeline_writes_files_and_returns_counts(
     assert result.approved_fraud_count + result.declined_fraud_count == 15
     assert result.transfer_attempt_count == 20
     assert result.completed_transfer_count + result.declined_transfer_count == 20
-    assert result.generator_version == "0.12.0"
-    assert result.schema_version == "1.7.3"
+    assert result.generator_version == "0.13.0"
+    assert result.schema_version == "1.8.0"
     assert result.scenario == "valid"
     assert result.expected_violation_count == 0
     assert result.created is True
@@ -239,7 +239,7 @@ def test_quality_scenarios_coexist_and_only_change_target_file(
     quality = manifest["quality_summary"]
     assert manifest["scenario"] == scenario
     assert manifest["quality_scenarios"] == [scenario]
-    assert quality["quality_scenario_version"] == "1.2.0"
+    assert quality["quality_scenario_version"] == "2.0.0"
     assert quality["target_entity"] == entity
     assert quality["target_field"] == field
     assert quality["affected_count"] == result.quality_affected_count

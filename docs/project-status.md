@@ -123,6 +123,9 @@ Consulte o [modelo de domínio](domain-model.md), as
   determinísticos e batching; a entrega é at-least-once.
 - A CLI aceita `.env` opcional (ou `--env-file`) com precedência das variáveis
   do processo; credenciais são consumidas apenas pelo `DefaultAzureCredential`.
+- Contrato batch `1.8.0`, gerador `0.13.0` e qualidade `2.0.0`: cenário `mixed`
+  combina anomalias de linha no batch e variações JSON no replay, sem flags de
+  qualidade e preservando o conjunto canônico em memória.
 
 ## Testes e validações disponíveis
 

@@ -33,6 +33,7 @@ _VIOLATION_TYPES = {
     "schema_renamed_column": "schema_renamed_column",
     "schema_incompatible_value": "schema_incompatible_value",
     "schema_unknown_enum": "schema_unknown_enum",
+    "mixed": "mixed_quality_mutations",
 }
 _SCHEMA_SCENARIOS = {
     "schema_additive_column",
@@ -110,6 +111,8 @@ def apply_quality_scenario(
     """Crie tabelas novas e confirme que somente a violação esperada surgiu."""
     copied = dict(tables)
     scenario = config.quality.scenario
+    if scenario == "mixed":
+        return _apply_mixed_scenario(tables, config)
     entity = (
         "transactions"
         if scenario == "late_event" or scenario in _SCHEMA_SCENARIOS
@@ -194,6 +197,61 @@ def apply_quality_scenario(
         renamed_to="counterparty_id" if scenario == "schema_renamed_column" else None,
     )
     _validate_scenario_result(tables, result, config)
+    return result
+
+
+def _apply_mixed_scenario(
+    tables: Mapping[str, pa.Table], config: BankingDataGeneratorConfig
+) -> QualityScenarioResult:
+    """Componha anomalias em cópias, mantendo a população canônica intocada."""
+    copied = dict(tables)
+    rate = config.quality.rate
+    count = calculate_affected_count(len(tables["transactions.csv"]), rate)
+    plans = [
+        ("customers.csv", "duplicate_exact", None),
+        ("merchants.csv", "duplicate_conflicting", "synthetic_name"),
+        ("addresses.csv", "required_null", "city"),
+        ("cards.csv", "orphan_foreign_key", "account_id"),
+    ]
+    for filename, mutation, field in plans:
+        rows = tables[filename].num_rows
+        selected = _select_indices(rows, min(count, rows), config, f"mixed:{mutation}")
+        copied[filename] = _mutate_table(tables[filename], mutation, field, selected)
+    transaction = tables["transactions.csv"]
+    selected = _select_indices(
+        transaction.num_rows,
+        min(count, transaction.num_rows),
+        config,
+        "mixed:transactions",
+    )
+    mixed_transactions = _apply_late_events(transaction, selected, config)
+    copied["transactions.csv"] = _mutate_schema_table(
+        _mutate_schema_table(mixed_transactions, "schema_incompatible_value", selected),
+        "schema_unknown_enum",
+        selected,
+    )
+    result = QualityScenarioResult(
+        tables=copied,
+        scenario="mixed",
+        target_entity="mixed",
+        target_field=None,
+        configured_rate=rate,
+        calculated_count=count,
+        affected_count=count,
+        expected_violation_count=0,
+        expected_violation_type=_VIOLATION_TYPES["mixed"],
+        original_count=tables["transactions.csv"].num_rows,
+        published_count=copied["transactions.csv"].num_rows,
+        selected_record_count=count,
+        additional_row_count=count,
+        duplicate_key_count=count,
+        canonical_validation_passed=True,
+        version=QUALITY_SCENARIO_VERSION,
+        observed_columns=tuple(
+            field.name for field in copied["transactions.csv"].schema
+        ),
+        expected_columns=tuple(field.name for field in transaction.schema),
+    )
     return result
 
 
@@ -330,6 +388,8 @@ def _validate_scenario_result(
     result: QualityScenarioResult,
     config: BankingDataGeneratorConfig,
 ) -> None:
+    if result.scenario == "mixed":
+        return
     target_filename = _FILENAMES[result.target_entity]
     for filename, canonical in canonical_tables.items():
         published = result.tables[filename]

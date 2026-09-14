@@ -52,7 +52,7 @@ carrega a configuração, gera e valida os dados e escreve `customers.csv`,
 particionado por versão do schema, data de referência, seed e cenário `valid`.
 O conjunto é publicado de uma só vez; uma reexecução idêntica valida os arquivos
 existentes sem sobrescrevê-los. O layout é
-`data/output/schema_version=1.7.3/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
+`data/output/schema_version=1.8.0/reference_date=YYYY-MM-DD/seed=N/scenario=valid/`.
 
 Use `--scenario` para publicar, separadamente, `duplicate_exact`,
 `duplicate_conflicting`, `required_null`, `orphan_foreign_key`, `late_event`,
@@ -60,6 +60,9 @@ Use `--scenario` para publicar, separadamente, `duplicate_exact`,
 `schema_incompatible_value` ou `schema_unknown_enum`. Sem a opção,
 o cenário é `valid`. Todos mantêm os mesmos nove CSVs; somente o CSV alvo e o
 manifesto diferem do conjunto canônico.
+
+Use `--scenario mixed` para combinar anomalias de linha no mesmo CSV e replay;
+`valid` continua sendo o padrão. Mutações de cabeçalho permanecem isoladas.
 
 O replay opcional de compras, estornos e transferências usa
 `--publish-event-hubs` e `DefaultAzureCredential`. A entrega é at-least-once;
@@ -128,6 +131,7 @@ nunca são aceitos nem registrados.
 - [Modelo de domínio](docs/domain-model.md)
 - [Regras de negócio](docs/business-rules.md)
 - [Cenários de qualidade de dados](docs/data-quality-scenarios.md)
+- [Contrato de eventos do Event Hubs](docs/event-hubs-contract.md)
 
 ## Estado atual
 
